@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La Fábrica Mayorista — Control de Stock</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13151a">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#13151a; --surface:#1b1e25; --surface2:#242832; --line:#333845;
+  --text:#ece9e2; --muted:#8d92a0;
+  --panel:#f0a93c; --panel-soft:#f0a93c22;
+  --stock:#38c2a0; --stock-soft:#38c2a022;
+  --ventas:#5b8cd6; --ventas-soft:#5b8cd622;
+  --balance:#b07cf0; --balance-soft:#b07cf022;
+  --bad:#e0685a; --good:#52c287;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f3f1ec; --surface:#ffffff; --surface2:#f2f0ea; --line:#e2ded3; --text:#1c1e24; --muted:#696e7c;
+  }
+}
+:root[data-theme="dark"]{--bg:#13151a;--surface:#1b1e25;--surface2:#242832;--line:#333845;--text:#ece9e2;--muted:#8d92a0}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden}
+h1,h2,.num{font-family:'Space Grotesk',system-ui,sans-serif}
+button,select,input{font-family:inherit}
+::selection{background:var(--panel-soft)}
+
+/* ---------- Header ---------- */
+header.top{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:16px 20px;padding-top:calc(16px + env(safe-area-inset-top,0px));
+  position:sticky;top:0;z-index:30;background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+}
+header.top .brand{display:flex;flex-direction:column;gap:2px}
+header.top h1{font-size:18px;font-weight:700;letter-spacing:-0.01em;margin:0}
+header.top .sub{font-size:12px;color:var(--muted)}
+#mode-toggle{
+  display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--line);
+  color:var(--text);border-radius:99px;padding:7px 14px 7px 7px;font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:transform .15s ease, border-color .2s ease;
+}
+#mode-toggle:active{transform:scale(0.96)}
+#mode-toggle .dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--panel);color:#1b1304}
+
+/* ---------- Layout shells ---------- */
+.app{display:flex;min-height:100vh}
+.sidebar{display:none}
+main.content{flex:1;min-width:0}
+.shell{max-width:1020px;margin:0 auto;padding:22px 20px 100px;position:relative}
+
+/* PC MODE: sidebar nav */
+body[data-mode="pc"] .sidebar{
+  display:flex;flex-direction:column;gap:4px;width:220px;flex-shrink:0;
+  padding:22px 14px;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;
+}
+body[data-mode="pc"] .sidebar .side-item{
+  display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:10px;cursor:pointer;
+  color:var(--muted);font-size:13.5px;font-weight:600;transition:background .18s ease, color .18s ease;
+  border-left:3px solid transparent;
+}
+body[data-mode="pc"] .sidebar .side-item .ic{font-size:16px}
+body[data-mode="pc"] .sidebar .side-item:hover{background:var(--surface2)}
+body[data-mode="pc"] .sidebar .side-item.active{color:var(--text);background:var(--surface2)}
+body[data-mode="pc"] .sidebar .side-item.active[data-c="panel"]{border-left-color:var(--panel)}
+body[data-mode="pc"] .sidebar .side-item.active[data-c="stock"]{border-left-color:var(--stock)}
+body[data-mode="pc"] .sidebar .side-item.active[data-c="ventas"]{border-left-color:var(--ventas)}
+body[data-mode="pc"] .sidebar .side-item.active[data-c="balance"]{border-left-color:var(--balance)}
+body[data-mode="pc"] nav.tabs{display:none}
+body[data-mode="pc"] .shell{padding-bottom:40px}
+
+/* ANDROID MODE: bottom tabs */
+body[data-mode="android"] .sidebar{display:none}
+nav.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
+  background:color-mix(in srgb, var(--surface) 92%, transparent);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));
+}
+nav.tabs .tab-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;
+  border-radius:12px;color:var(--muted);font-size:10.5px;font-weight:600;cursor:pointer;
+  transition:color .2s ease, transform .15s ease;
+}
+nav.tabs .tab-item:active{transform:scale(0.93)}
+nav.tabs .tab-item .ic{font-size:19px;line-height:1}
+nav.tabs .tab-item.active[data-c="panel"]{color:var(--panel)}
+nav.tabs .tab-item.active[data-c="stock"]{color:var(--stock)}
+nav.tabs .tab-item.active[data-c="ventas"]{color:var(--ventas)}
+nav.tabs .tab-item.active[data-c="balance"]{color:var(--balance)}
+body[data-mode="android"] .shell{padding-bottom:92px}
+
+/* ---------- Views & transitions ---------- */
+.view{display:none}
+.view.active{display:block;animation:viewIn .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion: reduce){.view.active{animation:none}}
+
+.section-tag{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.01em;margin-bottom:14px}
+.section-tag .sw{width:8px;height:8px;border-radius:50%}
+.tag-panel .sw{background:var(--panel)} .tag-panel{color:var(--panel)}
+.tag-stock .sw{background:var(--stock)} .tag-stock{color:var(--stock)}
+.tag-ventas .sw{background:var(--ventas)} .tag-ventas{color:var(--ventas)}
+.tag-balance .sw{background:var(--balance)} .tag-balance{color:var(--balance)}
+
+/* ---------- Cards ---------- */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:560px){.hero{grid-template-columns:1fr}}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 26px -14px rgba(0,0,0,.4)}
+.card .label{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 9px}
+.card .num{font-size:30px;font-weight:700;letter-spacing:-0.01em;line-height:1.1}
+.card .sub{font-size:12px;color:var(--muted);margin-top:7px}
+.card.c-panel{background:linear-gradient(155deg, var(--panel-soft), var(--surface) 55%);border-color:color-mix(in srgb, var(--panel) 35%, var(--line))}
+.card.c-panel .num{color:var(--panel)}
+.card.c-ventas{background:linear-gradient(155deg, var(--ventas-soft), var(--surface) 55%);border-color:color-mix(in srgb, var(--ventas) 35%, var(--line))}
+.card.c-ventas .num{color:var(--ventas)}
+.card.c-stock{background:linear-gradient(155deg, var(--stock-soft), var(--surface) 55%);border-color:color-mix(in srgb, var(--stock) 35%, var(--line))}
+.card.c-stock .num{color:var(--stock)}
+.card.c-balance{background:linear-gradient(155deg, var(--balance-soft), var(--surface) 55%);border-color:color-mix(in srgb, var(--balance) 35%, var(--line))}
+.card.c-balance .num{color:var(--balance)}
+
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:700px){.row3{grid-template-columns:1fr 1fr}}
+@media(max-width:420px){.row3{grid-template-columns:1fr}}
+.row3 .card .num{font-size:22px}
+
+section.block{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+section.block h2{font-size:14.5px;margin:0 0 15px;font-weight:700}
+
+/* ---------- Forms ---------- */
+.form-grid{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end}
+@media(max-width:700px){.form-grid{grid-template-columns:1fr 1fr}}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600}
+input,select{
+  width:100%;background:var(--surface2);border:1px solid var(--line);color:var(--text);
+  border-radius:10px;padding:10px 12px;font-size:14px;transition:border-color .18s ease, box-shadow .18s ease;
+}
+input:focus,select:focus{outline:none;border-color:var(--ventas);box-shadow:0 0 0 3px var(--ventas-soft)}
+button.primary{
+  border:none;border-radius:10px;padding:11px 18px;font-weight:700;font-size:13.5px;cursor:pointer;
+  color:#101216;white-space:nowrap;transition:transform .15s ease, filter .15s ease;
+}
+button.primary:active{transform:scale(0.96)}
+button.primary.b-stock{background:var(--stock)}
+button.primary.b-ventas{background:var(--ventas);color:#0d131e}
+button.ghost{
+  background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:9px;
+  padding:7px 11px;font-size:12px;cursor:pointer;transition:border-color .18s ease, color .18s ease;
+}
+button.ghost:hover{color:var(--bad);border-color:var(--bad)}
+
+/* ---------- Tables ---------- */
+.wrap-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{text-align:left;color:var(--muted);font-weight:700;font-size:11px;letter-spacing:.01em;padding:0 10px 10px;border-bottom:1px solid var(--line)}
+tbody td{padding:11px 10px;border-bottom:1px solid var(--line)}
+tbody tr{transition:background .15s ease}
+tbody tr:hover{background:var(--surface2)}
+tbody tr:last-child td{border-bottom:none}
+.low{color:var(--bad);font-weight:700}
+.empty{color:var(--muted);font-size:13.5px;padding:26px 4px;text-align:center}
+
+.sell-form{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end}
+@media(max-width:560px){.sell-form{grid-template-columns:1fr 1fr}}
+
+.toast{
+  position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:var(--surface2);border:1px solid var(--line);color:var(--text);padding:11px 18px;
+  border-radius:11px;font-size:13.5px;opacity:0;transition:opacity .25s ease, transform .25s ease;
+  pointer-events:none;z-index:50;box-shadow:0 12px 30px -12px rgba(0,0,0,.5);
+}
+body[data-mode="pc"] .toast{bottom:28px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body data-mode="android">
+<div class="app">
+  <aside class="sidebar">
+    <div class="side-item active" data-view="panel" data-c="panel"><span class="ic">📊</span>Panel</div>
+    <div class="side-item" data-view="stock" data-c="stock"><span class="ic">👕</span>Stock</div>
+    <div class="side-item" data-view="ventas" data-c="ventas"><span class="ic">💳</span>Ventas</div>
+    <div class="side-item" data-view="balance" data-c="balance"><span class="ic">📈</span>Balance</div>
+  </aside>
+
+  <main class="content">
+    <header class="top">
+      <div class="brand">
+        <h1>La Fábrica Mayorista</h1>
+        <span class="sub" id="fecha-hoy"></span>
+      </div>
+      <button id="mode-toggle"><span class="dot" id="mode-dot">📱</span><span id="mode-label">Android</span></button>
+    </header>
+
+    <div class="shell" id="swipe-area">
+
+      <!-- PANEL -->
+      <div class="view active" id="view-panel">
+        <div class="hero">
+          <div class="card c-panel">
+            <p class="label">Vendido este mes</p>
+            <p class="num" id="panel-vendido-mes">$0</p>
+            <p class="sub" id="panel-mes-nombre"></p>
+          </div>
+          <div class="card c-ventas">
+            <p class="label">Valor de stock actual</p>
+            <p class="num" id="panel-valor-stock">$0</p>
+            <p class="sub" id="panel-unidades-stock"></p>
+          </div>
+        </div>
+        <div class="row3">
+          <div class="card"><p class="label">Vendido hoy</p><p class="num" id="panel-hoy">$0</p></div>
+          <div class="card"><p class="label">Vendido esta semana</p><p class="num" id="panel-semana">$0</p></div>
+          <div class="card"><p class="label">Bajo stock</p><p class="num" id="panel-bajo-stock">0</p></div>
+        </div>
+        <section class="block">
+          <span class="section-tag tag-ventas"><span class="sw"></span>Últimas ventas</span>
+          <div class="wrap-table"><table>
+            <thead><tr><th>Producto</th><th>Cant.</th><th>Total</th><th>Fecha</th></tr></thead>
+            <tbody id="panel-ultimas-ventas"></tbody>
+          </table></div>
+        </section>
+      </div>
+
+      <!-- STOCK -->
+      <div class="view" id="view-stock">
+        <section class="block">
+          <span class="section-tag tag-stock"><span class="sw"></span>Agregar producto</span>
+          <div class="form-grid">
+            <div><label>Nombre</label><input id="p-nombre" placeholder="Remera básica talle M"></div>
+            <div><label>Precio ($)</label><input id="p-precio" type="number" min="0" step="1" placeholder="0"></div>
+            <div><label>Cantidad</label><input id="p-cantidad" type="number" min="0" step="1" placeholder="0"></div>
+            <button class="primary b-stock" id="btn-agregar-producto">Agregar</button>
+          </div>
+        </section>
+        <section class="block">
+          <span class="section-tag tag-stock"><span class="sw"></span>Stock actual</span>
+          <div class="wrap-table"><table>
+            <thead><tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Valor</th><th></th></tr></thead>
+            <tbody id="tabla-stock"></tbody>
+          </table></div>
+          <p class="empty" id="stock-empty" style="display:none">No hay productos cargados todavía.</p>
+        </section>
+      </div>
+
+      <!-- VENTAS -->
+      <div class="view" id="view-ventas">
+        <section class="block">
+          <span class="section-tag tag-ventas"><span class="sw"></span>Registrar venta</span>
+          <div class="sell-form">
+            <div><label>Producto</label><select id="v-producto"></select></div>
+            <div><label>Cantidad</label><input id="v-cantidad" type="number" min="1" step="1" value="1"></div>
+            <button class="primary b-ventas" id="btn-vender">Vender</button>
+          </div>
+        </section>
+        <div class="row3">
+          <div class="card"><p class="label">Hoy</p><p class="num" id="v-hoy">$0</p></div>
+          <div class="card"><p class="label">Esta semana</p><p class="num" id="v-semana">$0</p></div>
+          <div class="card"><p class="label">Este mes</p><p class="num" id="v-mes">$0</p></div>
+        </div>
+        <section class="block">
+          <span class="section-tag tag-ventas"><span class="sw"></span>Historial</span>
+          <div class="wrap-table"><table>
+            <thead><tr><th>Producto</th><th>Cant.</th><th>Precio u.</th><th>Total</th><th>Fecha</th><th></th></tr></thead>
+            <tbody id="tabla-ventas"></tbody>
+          </table></div>
+          <p class="empty" id="ventas-empty" style="display:none">Todavía no registraste ventas.</p>
+        </section>
+      </div>
+
+      <!-- BALANCE -->
+      <div class="view" id="view-balance">
+        <section class="block">
+          <span class="section-tag tag-balance"><span class="sw"></span>Inventario completo</span>
+          <div class="wrap-table"><table>
+            <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Valor en stock</th></tr></thead>
+            <tbody id="tabla-inventario"></tbody>
+          </table></div>
+          <p class="sub" style="margin-top:12px">Valor total de inventario: <strong id="inv-total">$0</strong></p>
+        </section>
+        <section class="block">
+          <span class="section-tag tag-balance"><span class="sw"></span>Balance mensual</span>
+          <div class="wrap-table"><table>
+            <thead><tr><th>Mes</th><th>Vendido</th><th>Unidades vendidas</th></tr></thead>
+            <tbody id="tabla-balance"></tbody>
+          </table></div>
+          <p class="empty" id="balance-empty" style="display:none">Todavía no hay ventas registradas.</p>
+        </section>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<nav class="tabs">
+  <div class="tab-item active" data-view="panel" data-c="panel"><span class="ic">📊</span>Panel</div>
+  <div class="tab-item" data-view="stock" data-c="stock"><span class="ic">👕</span>Stock</div>
+  <div class="tab-item" data-view="ventas" data-c="ventas"><span class="ic">💳</span>Ventas</div>
+  <div class="tab-item" data-view="balance" data-c="balance"><span class="ic">📈</span>Balance</div>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LS_PROD = 'fabrica-productos';
+const LS_VENTAS = 'fabrica-ventas';
+const LS_MODO = 'fabrica-modo';
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const ORDEN_TABS = ['panel','stock','ventas','balance'];
+
+function load(key, fallback){
+  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; }
+}
+function save(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+let productos = load(LS_PROD, []);
+let ventas = load(LS_VENTAS, []);
+
+function fmt(n){ return '$' + Number(n||0).toLocaleString('es-AR', {maximumFractionDigits:0}); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function startOfWeek(d){
+  const date = new Date(d); const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  date.setHours(0,0,0,0); date.setDate(date.getDate() + diff);
+  return date;
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// ---------- Modo Android / PC ----------
+function setMode(mode){
+  document.body.dataset.mode = mode;
+  document.getElementById('mode-dot').textContent = mode === 'pc' ? '🖥' : '📱';
+  document.getElementById('mode-label').textContent = mode === 'pc' ? 'PC' : 'Android';
+  save(LS_MODO, mode);
+}
+document.getElementById('mode-toggle').addEventListener('click', ()=>{
+  setMode(document.body.dataset.mode === 'pc' ? 'android' : 'pc');
+});
+setMode(load(LS_MODO, window.matchMedia('(min-width:860px)').matches ? 'pc' : 'android'));
+
+// ---------- Navegación (tabs + sidebar) ----------
+function goToView(name){
+  document.querySelectorAll('.tab-item, .side-item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.view === name);
+  });
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  renderAll();
+}
+document.querySelectorAll('.tab-item, .side-item').forEach(el=>{
+  el.addEventListener('click', ()=>goToView(el.dataset.view));
+});
+
+// ---------- Deslizar entre pestañas ----------
+let touchX = 0, touchY = 0;
+const swipeArea = document.getElementById('swipe-area');
+swipeArea.addEventListener('touchstart', e=>{
+  touchX = e.changedTouches[0].clientX; touchY = e.changedTouches[0].clientY;
+}, {passive:true});
+swipeArea.addEventListener('touchend', e=>{
+  const dx = e.changedTouches[0].clientX - touchX;
+  const dy = e.changedTouches[0].clientY - touchY;
+  if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5){
+    const activo = document.querySelector('.view.active').id.replace('view-','');
+    let idx = ORDEN_TABS.indexOf(activo);
+    idx = dx < 0 ? Math.min(idx+1, ORDEN_TABS.length-1) : Math.max(idx-1, 0);
+    goToView(ORDEN_TABS[idx]);
+  }
+}, {passive:true});
+
+// ---------- Stock ----------
+document.getElementById('btn-agregar-producto').addEventListener('click', ()=>{
+  const nombre = document.getElementById('p-nombre').value.trim();
+  const precio = parseFloat(document.getElementById('p-precio').value);
+  const cantidad = parseInt(document.getElementById('p-cantidad').value);
+  if(!nombre || isNaN(precio) || precio < 0 || isNaN(cantidad) || cantidad < 0){
+    toast('Completá nombre, precio y cantidad correctamente.'); return;
+  }
+  productos.push({id: uid(), nombre, precio, cantidad});
+  save(LS_PROD, productos);
+  document.getElementById('p-nombre').value = '';
+  document.getElementById('p-precio').value = '';
+  document.getElementById('p-cantidad').value = '';
+  toast('Producto agregado: ' + nombre);
+  renderAll();
+});
+function eliminarProducto(id){
+  productos = productos.filter(p=>p.id !== id);
+  save(LS_PROD, productos);
+  renderAll();
+}
+function renderStock(){
+  const tbody = document.getElementById('tabla-stock');
+  tbody.innerHTML = '';
+  document.getElementById('stock-empty').style.display = productos.length ? 'none' : 'block';
+  productos.forEach(p=>{
+    const bajo = p.cantidad <= 3;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.nombre}</td><td>${fmt(p.precio)}</td>
+      <td class="${bajo?'low':''}">${p.cantidad}${bajo?' · bajo':''}</td>
+      <td>${fmt(p.precio*p.cantidad)}</td>
+      <td><button class="ghost" data-id="${p.id}">Eliminar</button></td>`;
+    tr.querySelector('button').addEventListener('click', ()=>eliminarProducto(p.id));
+    tbody.appendChild(tr);
+  });
+}
+
+// ---------- Ventas ----------
+function renderSelectProductos(){
+  const sel = document.getElementById('v-producto');
+  const prev = sel.value; sel.innerHTML = '';
+  if(!productos.length){ sel.innerHTML = '<option value="">No hay productos cargados</option>'; return; }
+  productos.forEach(p=>{
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = `${p.nombre} — stock ${p.cantidad}`;
+    sel.appendChild(opt);
+  });
+  if(prev) sel.value = prev;
+}
+document.getElementById('btn-vender').addEventListener('click', ()=>{
+  const id = document.getElementById('v-producto').value;
+  const cant = parseInt(document.getElementById('v-cantidad').value);
+  const producto = productos.find(p=>p.id === id);
+  if(!producto){ toast('Elegí un producto.'); return; }
+  if(isNaN(cant) || cant <= 0){ toast('Ingresá una cantidad válida.'); return; }
+  if(cant > producto.cantidad){ toast('No hay stock suficiente de ' + producto.nombre); return; }
+  producto.cantidad -= cant;
+  save(LS_PROD, productos);
+  ventas.push({id: uid(), productoId: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cant, total: producto.precio*cant, fecha: new Date().toISOString()});
+  save(LS_VENTAS, ventas);
+  document.getElementById('v-cantidad').value = 1;
+  toast('Venta registrada: ' + producto.nombre);
+  renderAll();
+});
+function eliminarVenta(id){
+  const venta = ventas.find(v=>v.id === id);
+  if(!venta) return;
+  const prod = productos.find(p=>p.id === venta.productoId);
+  if(prod) prod.cantidad += venta.cantidad;
+  ventas = ventas.filter(v=>v.id !== id);
+  save(LS_PROD, productos); save(LS_VENTAS, ventas);
+  renderAll();
+}
+function rangoVentas(pred){ return ventas.filter(v=>pred(new Date(v.fecha))).reduce((s,v)=>s+v.total,0); }
+function renderVentasTab(){
+  const now = new Date();
+  const hoy0 = new Date(now); hoy0.setHours(0,0,0,0);
+  const semanaIni = startOfWeek(now);
+  document.getElementById('v-hoy').textContent = fmt(rangoVentas(d=>d >= hoy0));
+  document.getElementById('v-semana').textContent = fmt(rangoVentas(d=>d >= semanaIni));
+  document.getElementById('v-mes').textContent = fmt(rangoVentas(d=>d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear()));
+
+  const tbody = document.getElementById('tabla-ventas');
+  tbody.innerHTML = '';
+  const ordenadas = [...ventas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  document.getElementById('ventas-empty').style.display = ordenadas.length ? 'none' : 'block';
+  ordenadas.forEach(v=>{
+    const f = new Date(v.fecha);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${v.nombre}</td><td>${v.cantidad}</td><td>${fmt(v.precio)}</td><td>${fmt(v.total)}</td>
+      <td>${f.toLocaleDateString('es-AR')} ${f.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td><button class="ghost" data-id="${v.id}">Deshacer</button></td>`;
+    tr.querySelector('button').addEventListener('click', ()=>eliminarVenta(v.id));
+    tbody.appendChild(tr);
+  });
+}
+
+// ---------- Panel ----------
+function renderPanel(){
+  const now = new Date();
+  document.getElementById('fecha-hoy').textContent = `${DIAS[now.getDay()]} ${now.getDate()} de ${MESES[now.getMonth()]}`;
+  document.getElementById('panel-mes-nombre').textContent = `En ${MESES[now.getMonth()]}, antes de cerrar el mes`;
+  const hoy0 = new Date(now); hoy0.setHours(0,0,0,0);
+  const semanaIni = startOfWeek(now);
+  const vendidoMes = rangoVentas(d=>d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear());
+  const valorStock = productos.reduce((s,p)=>s+p.precio*p.cantidad,0);
+  const unidadesStock = productos.reduce((s,p)=>s+p.cantidad,0);
+  const bajoStock = productos.filter(p=>p.cantidad<=3).length;
+
+  document.getElementById('panel-vendido-mes').textContent = fmt(vendidoMes);
+  document.getElementById('panel-valor-stock').textContent = fmt(valorStock);
+  document.getElementById('panel-unidades-stock').textContent = unidadesStock + ' unidades en ' + productos.length + ' productos';
+  document.getElementById('panel-hoy').textContent = fmt(rangoVentas(d=>d >= hoy0));
+  document.getElementById('panel-semana').textContent = fmt(rangoVentas(d=>d >= semanaIni));
+  document.getElementById('panel-bajo-stock').textContent = bajoStock;
+
+  const tbody = document.getElementById('panel-ultimas-ventas');
+  tbody.innerHTML = '';
+  const ultimas = [...ventas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,6);
+  if(!ultimas.length){ tbody.innerHTML = '<tr><td colspan="4" class="empty">Todavía no hay ventas.</td></tr>'; }
+  ultimas.forEach(v=>{
+    const f = new Date(v.fecha);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${v.nombre}</td><td>${v.cantidad}</td><td>${fmt(v.total)}</td><td>${f.toLocaleDateString('es-AR')}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ---------- Balance / inventario ----------
+function renderBalance(){
+  const tbody = document.getElementById('tabla-inventario');
+  tbody.innerHTML = '';
+  let total = 0;
+  productos.forEach(p=>{
+    const valor = p.precio*p.cantidad; total += valor;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.nombre}</td><td>${p.cantidad}</td><td>${fmt(p.precio)}</td><td>${fmt(valor)}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('inv-total').textContent = fmt(total);
+
+  const porMes = {};
+  ventas.forEach(v=>{
+    const f = new Date(v.fecha);
+    const key = f.getFullYear()+'-'+String(f.getMonth()).padStart(2,'0');
+    if(!porMes[key]) porMes[key] = {total:0, unidades:0, mes:f.getMonth(), anio:f.getFullYear()};
+    porMes[key].total += v.total; porMes[key].unidades += v.cantidad;
+  });
+  const claves = Object.keys(porMes).sort().reverse();
+  const tbody2 = document.getElementById('tabla-balance');
+  tbody2.innerHTML = '';
+  document.getElementById('balance-empty').style.display = claves.length ? 'none' : 'block';
+  claves.forEach(k=>{
+    const m = porMes[k];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${MESES[m.mes]} ${m.anio}</td><td>${fmt(m.total)}</td><td>${m.unidades}</td>`;
+    tbody2.appendChild(tr);
+  });
+}
+
+function renderAll(){ renderPanel(); renderStock(); renderSelectProductos(); renderVentasTab(); renderBalance(); }
+renderAll();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
