@@ -146,6 +146,16 @@ dialog .db{padding:16px}
 .hr-zone:last-child{border:0}
 .hr-zone .sw{width:12px;height:36px;border-radius:5px}
 .hr-zone .nm{flex:1}
+/* constructor de sesiones */
+.editor{border-top:1px solid var(--line);padding-top:12px;margin-bottom:12px}
+.segbox{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.blockbox .segbox{background:var(--surface)}
+.seglbl{font-size:12.5px;font-weight:600;color:var(--muted)}
+.segrow{display:flex;gap:8px;flex-wrap:wrap}
+.segrow>select{flex:1 1 100px;min-width:0}.segrow>input{flex:1 1 60px;min-width:0}
+.segrow>select[data-f="u"]{flex:0 0 64px}
+.blockbox{border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:14px;padding:12px;margin-bottom:10px;background:var(--surface2)}
+.optrow{gap:8px;padding:6px 0;font-size:14px;font-weight:500;cursor:pointer}
 svg text{fill:var(--muted);font-size:10px;font-family:Inter,sans-serif}
 </style>
 </head>
@@ -179,8 +189,10 @@ svg text{fill:var(--muted);font-size:10px;font-family:Inter,sans-serif}
           <div class="stat"><div class="v num" id="g-gps">—</div><div class="k">Precisión GPS</div></div>
         </div>
         <div class="row" style="justify-content:center" id="g-ctrls"></div>
-        <div class="row small muted" style="justify-content:center;margin-top:10px">
-          <label class="row" style="gap:6px"><input type="checkbox" id="g-voice" checked> Aviso por voz cada km</label>
+        <div class="grid3" style="margin-top:14px">
+          <label class="f">Aviso por voz<select id="g-every"><option value="off">Nunca</option><option value="500">Cada 500 m</option><option value="1000">Cada km</option><option value="2000">Cada 2 km</option><option value="5000">Cada 5 km</option><option value="t300">Cada 5 min</option><option value="t600">Cada 10 min</option></select></label>
+          <label class="f">Ritmo objetivo<input id="g-target" placeholder="m:ss /km"></label>
+          <label class="f">Meta (km)<input id="g-goal" inputmode="decimal" placeholder="opcional"></label>
         </div>
       </div>
       <div class="card"><h3>Recorrido</h3><svg class="track" id="g-track" viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -275,7 +287,7 @@ const KEY = 'zancada-v1';
 const defaults = () => ({
   profile: { name: '', age: '', sex: '', weight: '', hrMax: '', hrRest: '', vdot: null, ref: null },
   runs: [], shoes: [], plan: null, theme: '',
-  intCustom: { wu: 10, reps: 6, work: '3:00', rest: '2:00', cd: 10 }
+  workouts: [], intOpts: {}
 });
 function load() {
   try { const r = localStorage.getItem(KEY); if (r) { const d = JSON.parse(r); return { ...defaults(), ...d, profile: { ...defaults().profile, ...(d.profile || {}) } }; } } catch (e) { }
@@ -1082,6 +1094,9 @@ function renderGps() {
   let cur = '--:--';
   if (G.buf.length > 1) { const a = G.buf[0], b = G.buf[G.buf.length - 1]; if (b.d - a.d > 15) cur = fmtPace((b.t - a.t) / ((b.d - a.d) / 1000)); }
   $('#g-pace').textContent = G.state === 'running' ? cur : '--:--';
+  const tgt = gOpts().target, cps = parsePace(cur);
+  $('#g-pace').style.color = tgt && cps > 0 && G.state === 'running' ? (cps > tgt * 1.03 ? 'var(--warn)' : cps < tgt * 0.97 ? 'var(--z1)' : 'var(--good)') : '';
+  if (G.state === 'running' && e >= G.nextAnnT) { G.nextAnnT += +gOpts().every.slice(1); speak(gAnnounce(e)); }
   $('#g-gps').textContent = G.acc ? `±${Math.round(G.acc)} m` : '—';
   const c = $('#g-ctrls');
   const html = G.state === 'idle' ? `<button class="btn pri" style="padding:14px 34px;font-size:17px" id="g-start">▶ Empezar</button>`
@@ -1094,6 +1109,20 @@ function renderGps() {
     $('#g-resume') && ($('#g-resume').onclick = gResume);
     $('#g-stop') && ($('#g-stop').onclick = gStop);
   }
+}
+function gOpts() { const o = S.gpsOpts || {}; return { every: o.every || '1000', target: parsePace(o.target) || null, goal: num(o.goal) || 0, raw: o }; }
+function gAnnounce(e) {
+  const km = G.dist / 1000, avg = km > 0.05 ? e / km : null, o = gOpts();
+  let t = `${km.toFixed(2).replace('.', ',')} kilómetros. Tiempo ${spokenTime(e)}.`;
+  if (avg) t += ` Ritmo medio ${paceSpeech(avg)}.`;
+  if (avg && o.target) { const d = Math.round(avg - o.target); t += Math.abs(d) <= 3 ? ' En ritmo objetivo.' : d > 0 ? ` ${d} segundos más lento que el objetivo.` : ` ${-d} segundos más rápido que el objetivo.`; }
+  if (o.goal > km) t += ` Faltan ${(o.goal - km).toFixed(1).replace('.', ',')} kilómetros.`;
+  return t;
+}
+function bindGpsOpts() {
+  const o = gOpts().raw;
+  $('#g-every').value = o.every || '1000'; $('#g-target').value = o.target || ''; $('#g-goal').value = o.goal || '';
+  ['#g-every', '#g-target', '#g-goal'].forEach(sel => $(sel).onchange = () => { S.gpsOpts = { every: $('#g-every').value, target: $('#g-target').value.trim(), goal: $('#g-goal').value.trim() }; save(); });
 }
 function drawTrack() {
   const pts = G.pts; const svg = $('#g-track');
@@ -1140,16 +1169,19 @@ function onPos(pos) {
   while (G.buf.length > 2 && G.buf[G.buf.length - 1].t - G.buf[0].t > 30) G.buf.shift();
   while (G.dist >= G.nextKm * 1000) {
     const split = e - G.lastSplitT; G.splits.push(split); G.lastSplitT = e;
-    if ($('#g-voice').checked) speak(`Kilómetro ${G.nextKm}. Parcial ${paceSpeech(split)}. Ritmo medio ${paceSpeech(e / G.nextKm)}.`);
     vib([200, 100, 200]);
     G.nextKm++; drawSplits();
   }
+  const o = gOpts();
+  if (/^\d+$/.test(o.every) && G.dist >= G.nextAnn) { G.nextAnn += +o.every; speak(gAnnounce(e)); }
+  if (o.goal > 0 && !G.goalDone && G.dist >= o.goal * 1000) { G.goalDone = true; vib([400, 150, 400]); speak(`¡Meta de ${String(o.goal).replace('.', ',')} kilómetros completada! Tiempo ${spokenTime(e)}.`); }
   drawTrack();
 }
 function gStart() {
   if (window.claude && !NATIVE) return toast('El GPS no está disponible en esta vista. Usa la app Android o la web publicada.');
   if (!('geolocation' in navigator)) return toast('Este dispositivo no tiene GPS disponible');
-  Object.assign(G, { pts: [], dist: 0, elapsed: 0, splits: [], lastSplitT: 0, buf: [], nextKm: 1 });
+  const o = gOpts();
+  Object.assign(G, { pts: [], dist: 0, elapsed: 0, splits: [], lastSplitT: 0, buf: [], nextKm: 1, nextAnn: /^\d+$/.test(o.every) ? +o.every : Infinity, nextAnnT: o.every[0] === 't' ? +o.every.slice(1) : Infinity, goalDone: false });
   G.watch = navigator.geolocation.watchPosition(onPos, err => toast('GPS: ' + (err.code === 1 ? 'permiso denegado' : 'sin señal')), { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
   G.state = 'running'; G.startAt = Date.now();
   G.timer = setInterval(renderGps, 500);
@@ -1169,19 +1201,81 @@ async function gStop() {
 }
 
 /* =================== CORRER: INTERVALOS =================== */
+// Un tramo se mide por tiempo (v = segundos) o por distancia (v = metros), con ritmo objetivo opcional
+const T = (v, p = '') => ({ m: 't', v, p });
+const D = (v, p = '') => ({ m: 'd', v, p, u: v >= 1000 ? 'km' : 'm' });
+const blk = (reps, work, rest, extra = {}) => ({ reps, work, rest, rk: 'trote', after: 0, ...extra });
 const PRESETS = [
-  { n: 'Personalizado', custom: true },
-  { n: 'Fartlek 8 × 1\'/1\'', wu: 10, reps: 8, work: 60, rest: 60, cd: 10 },
-  { n: 'VO₂máx 5 × 3\'/2\'', wu: 15, reps: 5, work: 180, rest: 120, cd: 10 },
-  { n: 'Umbral 3 × 8\'/2\'', wu: 15, reps: 3, work: 480, rest: 120, cd: 10 },
-  { n: 'Cuestas 8 × 45"/1\'30"', wu: 15, reps: 8, work: 45, rest: 90, cd: 10 },
-  { n: 'Rectas 6 × 20"/1\'', wu: 0, reps: 6, work: 20, rest: 60, cd: 5 },
-  { n: 'Tabata carrera 8 × 20"/10"', wu: 10, reps: 8, work: 20, rest: 10, cd: 5 },
-  { n: 'Iniciación correr/caminar 8 × 2\'/1\'', wu: 5, reps: 8, work: 120, rest: 60, cd: 5, walk: true }
+  { id: 'p-400', name: '10 × 400 m', type: 'series', wu: T(900, 'E'), blocks: [blk(10, D(400, 'R'), D(400, 'E'))], cd: T(600, 'E') },
+  { id: 'p-800', name: '6 × 800 m', type: 'series', wu: T(900, 'E'), blocks: [blk(6, D(800, 'I'), T(120, 'E'))], cd: T(600, 'E') },
+  { id: 'p-1k', name: '5 × 1 km', type: 'series', wu: T(900, 'E'), blocks: [blk(5, D(1000, 'I'), T(150, 'E'))], cd: T(600, 'E') },
+  { id: 'p-2k', name: '3 × 2 km a umbral', type: 'tempo', wu: T(900, 'E'), blocks: [blk(3, D(2000, 'T'), T(120, 'E'))], cd: T(600, 'E') },
+  { id: 'p-pir', name: 'Pirámide 400-800-1200-800-400', type: 'series', wu: T(900, 'E'), blocks: [400, 800, 1200, 800, 400].map(d => blk(1, D(d, 'I'), T(120, 'E'))), cd: T(600, 'E') },
+  { id: 'p-mix', name: '4 × 1 km + 4 × 400 m', type: 'series', wu: T(900, 'E'), blocks: [blk(4, D(1000, 'T'), T(90, 'E'), { after: 180 }), blk(4, D(400, 'I'), T(90, 'E'))], cd: T(600, 'E') },
+  { id: 'p-tempo', name: 'Tempo 20 min', type: 'tempo', wu: T(900, 'E'), blocks: [blk(1, T(1200, 'T'), T(0))], cd: T(600, 'E') },
+  { id: 'p-fartlek', name: 'Fartlek 8 × 1 min / 1 min', type: 'fartlek', wu: T(600, 'E'), blocks: [blk(8, T(60, 'I'), T(60, 'E'))], cd: T(600, 'E') },
+  { id: 'p-vo2', name: 'VO₂máx 5 × 3 min / 2 min', type: 'series', wu: T(900, 'E'), blocks: [blk(5, T(180, 'I'), T(120, 'E'))], cd: T(600, 'E') },
+  { id: 'p-hill', name: 'Cuestas 8 × 45 s', type: 'cuestas', wu: T(900, 'E'), blocks: [blk(8, T(45), T(90), { rk: 'caminar' })], cd: T(600, 'E') },
+  { id: 'p-strides', name: 'Rectas 6 × 100 m', type: 'suave', wu: T(0), blocks: [blk(6, D(100, 'R'), T(60), { rk: 'caminar' })], cd: T(300, 'E') },
+  { id: 'p-walk', name: 'Iniciación: correr 2 min / caminar 1 min', type: 'suave', wu: T(300), blocks: [blk(8, T(120, 'E'), T(60), { rk: 'caminar' })], cd: T(300) }
 ];
-const I = { state: 'idle', steps: [], idx: 0, left: 0, timer: null, preset: 1, total: 0, endAt: 0 };
+const PACE_KEYS = { '': 'Ritmo libre', E: 'Suave (E)', M: 'Maratón (M)', T: 'Umbral (T)', I: 'Intervalos (I)', R: 'Repeticiones (R)', c: 'Ritmo personalizado…' };
+const REST_KINDS = { trote: 'trotando', caminar: 'caminando', parado: 'parado' };
+const INT_OPTS = { voice: true, beep: true, vib: true, countdown: true, gps: true, coach: true };
+const iopts = () => ({ ...INT_OPTS, ...(S.intOpts || {}) });
+const allWorkouts = () => [...(S.workouts || []), ...PRESETS];
+const isCustom = w => !w.id.startsWith('p-');
+
+function fmtDist(m) { return m >= 1000 ? `${+(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`; }
+function fmtSeg(seg) { return seg.m === 'd' ? fmtDist(seg.v) : fmtTime(seg.v); }
+function segPace(seg) { // s/km objetivo, o null
+  if (!seg || !seg.p) return null;
+  if (seg.p === 'c') return seg.pc > 0 ? seg.pc : null;
+  const p = P(); if (!p) return null;
+  return seg.p === 'E' ? (p.E[0] + p.E[1]) / 2 : p[seg.p];
+}
+function paceLabel(seg) {
+  if (!seg.p) return '';
+  const pc = segPace(seg);
+  if (pc) return `a ${fmtPace(pc)}/km`;
+  return { E: 'suave', M: 'ritmo maratón', T: 'ritmo umbral', I: 'ritmo intervalos', R: 'ritmo rápido', c: '' }[seg.p] || '';
+}
+function segEst(seg) { // [segundos, metros] estimados
+  const pc = segPace(seg) || (P() ? (P().E[0] + P().E[1]) / 2 : 360);
+  return seg.m === 'd' ? [seg.v / 1000 * pc, seg.v] : [seg.v, seg.v / pc * 1000];
+}
+function buildSteps(w) {
+  const s = [];
+  if (w.wu && w.wu.v > 0) s.push({ k: 'wu', n: 'Calentamiento', seg: w.wu, c: 'var(--z1)' });
+  const totalWork = w.blocks.reduce((a, b) => a + (b.reps || 0), 0);
+  let n = 0;
+  w.blocks.forEach((b, bi) => {
+    for (let r = 1; r <= b.reps; r++) {
+      n++;
+      s.push({ k: 'work', n: totalWork > 1 ? `Serie ${n}/${totalWork}` : 'Trabajo', seg: b.work, c: 'var(--z5)', rep: n });
+      const lastRep = r === b.reps, lastBlock = bi === w.blocks.length - 1;
+      if (!lastRep && b.rest.v > 0) s.push({ k: 'rest', n: `Recupera ${REST_KINDS[b.rk] || ''}`, seg: b.rest, c: 'var(--z2)' });
+      if (lastRep && !lastBlock) {
+        if (b.after > 0) s.push({ k: 'rest', n: 'Pausa entre bloques', seg: T(b.after), c: 'var(--z2)' });
+        else if (b.rest.v > 0) s.push({ k: 'rest', n: `Recupera ${REST_KINDS[b.rk] || ''}`, seg: b.rest, c: 'var(--z2)' });
+      }
+    }
+  });
+  if (w.cd && w.cd.v > 0) s.push({ k: 'cd', n: 'Vuelta a la calma', seg: w.cd, c: 'var(--z1)' });
+  return s;
+}
+function workoutSummary(w) {
+  const steps = buildSteps(w);
+  const [t, d] = steps.reduce(([a, b], st) => { const [x, y] = segEst(st.seg); return [a + x, b + y]; }, [0, 0]);
+  const desc = w.blocks.map(b => `${b.reps} × ${fmtSeg(b.work)}${b.rest.v ? ` (rec. ${fmtSeg(b.rest)})` : ''}`).join(' + ');
+  return { steps, t, d, desc };
+}
+
+/* ---- editor ---- */
+const I = { state: 'idle', sel: 'p-800', editing: false };
 let actx = null;
 function beep(f = 880, d = 0.15, n = 1) {
+  if (!iopts().beep) return;
   try {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)();
     for (let i = 0; i < n; i++) {
@@ -1192,98 +1286,288 @@ function beep(f = 880, d = 0.15, n = 1) {
     }
   } catch (e) { }
 }
-function buildSteps(p) {
-  const s = [];
-  if (p.wu) s.push({ k: 'wu', n: 'Calentamiento', d: p.wu * 60, c: 'var(--z1)' });
-  for (let i = 1; i <= p.reps; i++) {
-    s.push({ k: 'work', n: p.walk ? `Corre ${i}/${p.reps}` : `Serie ${i}/${p.reps}`, d: p.work, c: 'var(--z5)', rep: i });
-    if (i < p.reps && p.rest) s.push({ k: 'rest', n: p.walk ? 'Camina' : 'Recupera', d: p.rest, c: 'var(--z2)' });
-  }
-  if (p.cd) s.push({ k: 'cd', n: 'Vuelta a la calma', d: p.cd * 60, c: 'var(--z1)' });
-  return s;
+const ivib = p => { if (iopts().vib) vib(p); };
+const ispeak = t => { if (iopts().voice) speak(t); };
+// "90" = 90 s, "1:30" = 90 s; en calentamiento/enfriamiento un número solo son minutos
+function parseTimeSec(v, minutes) { const s = String(v || '').trim(); if (!s) return 0; if (!s.includes(':')) return (num(s) || 0) * (minutes ? 60 : 1); return parseTime(s); }
+
+function segEditor(path, seg, label, opt = {}) {
+  const isD = seg.m === 'd';
+  const unit = seg.u || (seg.v >= 1000 ? 'km' : 'm');
+  const val = isD ? (unit === 'km' ? +(seg.v / 1000).toFixed(3) : seg.v) : (seg.v ? fmtTime(seg.v) : '');
+  return `<div class="segbox" data-path="${path}">
+    <div class="seglbl">${label}</div>
+    <div class="segrow">
+      <select data-f="m" aria-label="${label}: medir por"><option value="t" ${!isD ? 'selected' : ''}>⏱ Tiempo</option><option value="d" ${isD ? 'selected' : ''}>📏 Dist.</option></select>
+      <input data-f="v" inputmode="${isD ? 'decimal' : 'numeric'}" value="${val}" placeholder="${isD ? (unit === 'km' ? '1' : '400') : (opt.minutes ? 'min o m:ss' : 'm:ss')}" aria-label="${label}: valor">
+      ${isD ? `<select data-f="u" aria-label="Unidad"><option value="m" ${unit === 'm' ? 'selected' : ''}>m</option><option value="km" ${unit === 'km' ? 'selected' : ''}>km</option></select>` : ''}
+    </div>
+    <div class="segrow">
+      <select data-f="p" aria-label="${label}: ritmo">${Object.entries(PACE_KEYS).map(([k, n]) => `<option value="${k}" ${k === (seg.p || '') ? 'selected' : ''}>${n}${k && k !== 'c' && P() ? ' · ' + paceLabel({ p: k }).replace('a ', '') : ''}</option>`).join('')}</select>
+      ${seg.p === 'c' ? `<input data-f="pc" placeholder="m:ss /km" value="${seg.pc ? fmtPace(seg.pc) : ''}" aria-label="Ritmo objetivo">` : ''}
+    </div></div>`;
 }
-function currentPreset() {
-  const p = PRESETS[I.preset];
-  if (!p.custom) return p;
-  const c = S.intCustom;
-  return { n: 'Personalizado', wu: num(c.wu) || 0, reps: parseInt(c.reps) || 1, work: parseTimeSec(c.work) || 60, rest: parseTimeSec(c.rest) || 0, cd: num(c.cd) || 0 };
+function readSeg(box, old, minutes) {
+  const g = f => { const el = box.querySelector(`[data-f="${f}"]`); return el ? el.value : null; };
+  const m = g('m'), seg = { m, p: g('p') || '' };
+  if (m !== old.m) { seg.v = m === 'd' ? 1000 : 60 * (minutes ? 10 : 1); seg.u = 'km'; } // al cambiar de modo, valor por defecto
+  else if (m === 'd') { seg.u = g('u') || 'm'; seg.v = Math.round((num(g('v')) || 0) * (seg.u === 'km' ? 1000 : 1)); }
+  else seg.v = Math.round(parseTimeSec(g('v'), minutes));
+  if (seg.p === 'c') seg.pc = parsePace(g('pc')) || old.pc || null;
+  return seg;
 }
-// para intervalos: "90" = 90 s, "1:30" = 90 s
-function parseTimeSec(v) { const s = String(v || '').trim(); if (!s) return 0; if (!s.includes(':')) return num(s) || 0; return parseTime(s); }
+function newWorkout() {
+  return { id: 'c-' + uid(), name: 'Mi sesión', type: 'series', wu: T(600, 'E'), blocks: [blk(6, D(1000, 'I'), T(120, 'E'))], cd: T(600, 'E') };
+}
 function renderInt() {
   const box = $('#run-int');
+  if (I.state === 'done') return renderIntDone();
   if (I.state !== 'idle') return renderIntLive();
-  const p = currentPreset(), steps = buildSteps(p), tot = steps.reduce((a, s) => a + s.d, 0);
-  const c = S.intCustom;
-  box.innerHTML = `<div class="card"><h3>Temporizador de intervalos</h3>
-    <label class="f">Sesión<select id="in-preset">${PRESETS.map((x, i) => `<option value="${i}" ${i === I.preset ? 'selected' : ''}>${x.n}</option>`).join('')}</select></label>
-    ${PRESETS[I.preset].custom ? `<div class="grid3">
-      <label class="f">Calentar (min)<input id="ic-wu" inputmode="decimal" value="${esc(c.wu)}"></label>
-      <label class="f">Repeticiones<input id="ic-reps" inputmode="numeric" value="${esc(c.reps)}"></label>
-      <label class="f">Enfriar (min)<input id="ic-cd" inputmode="decimal" value="${esc(c.cd)}"></label>
-      <label class="f">Trabajo (m:ss)<input id="ic-work" value="${esc(c.work)}"></label>
-      <label class="f">Recuperación (m:ss)<input id="ic-rest" value="${esc(c.rest)}"></label></div>` : ''}
-    <div class="result small">Duración total: <b>${fmtTime(tot)}</b> · ${p.reps} × ${fmtTime(p.work)} con ${fmtTime(p.rest)} de recuperación</div>
-    <button class="btn pri block" id="in-start" style="margin-top:12px;padding:14px;font-size:17px">▶ Empezar sesión</button>
-    <p class="small muted">Avisos con pitidos, vibración y voz en cada cambio. Funciona sin conexión.</p></div>`;
-  $('#in-preset').onchange = e => { I.preset = +e.target.value; renderInt(); };
-  if (PRESETS[I.preset].custom) ['wu', 'reps', 'cd', 'work', 'rest'].forEach(k => $('#ic-' + k).onchange = e => { S.intCustom[k] = e.target.value; save(); renderInt(); });
-  $('#in-start').onclick = () => intStart(p);
+  let w = allWorkouts().find(x => x.id === I.sel) || PRESETS[1];
+  I.sel = w.id;
+  const sum = workoutSummary(w), o = iopts();
+  const custom = isCustom(w), editing = custom && I.editing;
+  const opt = (list) => list.map(x => `<option value="${x.id}" ${x.id === w.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  box.innerHTML = `<div class="card"><h3>Sesión de series</h3>
+    <label class="f">Elige una sesión<select id="in-sel">
+      ${S.workouts.length ? `<optgroup label="Mis sesiones">${opt(S.workouts)}</optgroup>` : ''}
+      <optgroup label="Sesiones de ejemplo">${opt(PRESETS)}</optgroup></select></label>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn sm" id="in-new">＋ Nueva</button>
+      ${custom ? `<button class="btn sm" id="in-edit">${editing ? '✓ Listo' : '✏️ Editar'}</button><button class="btn sm" id="in-dup">⧉ Duplicar</button><button class="btn sm danger" id="in-del">Eliminar</button>` : `<button class="btn sm" id="in-copy">✏️ Personalizar esta</button>`}
+    </div>
+    ${editing ? workoutEditor(w) : ''}
+    <div class="result small"><b>${esc(w.name)}</b><br>${esc(sum.desc)}<br>Duración ≈ <b>${fmtTime(sum.t)}</b> · Distancia ≈ <b>${fmtDist(sum.d)}</b>${P() ? '' : '<br><span class="muted">Guarda tu VDOT en Calcular para ver ritmos exactos.</span>'}</div>
+    <details class="acc" style="margin:12px 0 0;background:var(--surface2)"><summary class="small">Ver los ${sum.steps.length} pasos</summary><div class="body list">${sum.steps.map(st => `<div class="item" style="cursor:default;padding:7px 0"><span class="chip"><span class="d" style="background:${st.c}"></span>${esc(st.n)}</span><span class="small"><b>${fmtSeg(st.seg)}</b> ${esc(paceLabel(st.seg))}</span></div>`).join('')}</div></details>
+    <button class="btn pri block" id="in-start" style="margin-top:12px;padding:14px;font-size:17px">▶ Empezar sesión</button></div>
+  <details class="acc"><summary>⚙️ Avisos y opciones</summary><div class="body">
+    ${[['voice', 'Voz en cada cambio'], ['beep', 'Pitidos'], ['vib', 'Vibración'], ['countdown', 'Cuenta atrás de 3 s al empezar'], ['gps', 'Usar GPS (necesario para tramos por distancia)'], ['coach', 'Entrenador de ritmo por voz cada 200 m']].map(([k, n]) => `<label class="row optrow"><input type="checkbox" data-opt="${k}" ${o[k] ? 'checked' : ''}> ${n}</label>`).join('')}
+    <p class="small muted">Sin GPS, los tramos por distancia avanzan cuando pulsas «Hecho». Útil en pista contando vueltas (1 vuelta = 400 m).</p></div></details>`;
+  $('#in-sel').onchange = e => { I.sel = e.target.value; I.editing = false; renderInt(); };
+  $('#in-new').onclick = () => { const nw = newWorkout(); S.workouts.unshift(nw); save(); I.sel = nw.id; I.editing = true; renderInt(); };
+  $('#in-copy') && ($('#in-copy').onclick = () => { const nw = { ...JSON.parse(JSON.stringify(w)), id: 'c-' + uid(), name: w.name + ' (mía)' }; S.workouts.unshift(nw); save(); I.sel = nw.id; I.editing = true; renderInt(); });
+  $('#in-edit') && ($('#in-edit').onclick = () => { I.editing = !I.editing; renderInt(); });
+  $('#in-dup') && ($('#in-dup').onclick = () => { const nw = { ...JSON.parse(JSON.stringify(w)), id: 'c-' + uid(), name: w.name + ' (copia)' }; S.workouts.unshift(nw); save(); I.sel = nw.id; I.editing = true; renderInt(); });
+  $('#in-del') && ($('#in-del').onclick = async () => { if (!await ask(`¿Eliminar «${w.name}»?`, 'Eliminar')) return; S.workouts = S.workouts.filter(x => x.id !== w.id); I.sel = PRESETS[1].id; save(); renderInt(); });
+  $$('[data-opt]', box).forEach(c => c.onchange = () => { S.intOpts = { ...iopts(), [c.dataset.opt]: c.checked }; save(); });
+  $('#in-start').onclick = () => intStart(w);
+  if (editing) bindEditor(w);
 }
-function intStart(p) {
-  I.steps = buildSteps(p); I.idx = 0; I.total = I.steps.reduce((a, s) => a + s.d, 0); I.name = p.n; I.done = 0;
-  beep(660, 0.1); // desbloquea audio en iOS
-  I.state = 'running'; wakeOn(); startStep();
-  I.timer = setInterval(intTick, 250);
+function workoutEditor(w) {
+  return `<div class="editor">
+    <div class="grid2"><label class="f">Nombre<input id="ed-name" value="${esc(w.name)}"></label>
+      <label class="f">Tipo (para el diario)<select id="ed-type">${['series', 'tempo', 'fartlek', 'cuestas', 'ritmo', 'suave', 'largo'].map(k => `<option value="${k}" ${k === w.type ? 'selected' : ''}>${TYPES[k].label}</option>`).join('')}</select></label></div>
+    <label class="row optrow"><input type="checkbox" id="ed-wu-on" ${w.wu && w.wu.v > 0 ? 'checked' : ''}> Calentamiento</label>
+    ${w.wu && w.wu.v > 0 ? segEditor('wu', w.wu, 'Calentamiento', { minutes: true }) : ''}
+    ${w.blocks.map((b, i) => `<div class="blockbox" data-block="${i}">
+      <div class="row between"><b>Bloque ${i + 1}</b><div class="row" style="gap:6px">
+        <button class="btn sm" data-bact="up" ${i === 0 ? 'disabled' : ''} aria-label="Subir bloque">↑</button>
+        <button class="btn sm" data-bact="dup" aria-label="Duplicar bloque">⧉</button>
+        <button class="btn sm danger" data-bact="del" ${w.blocks.length === 1 ? 'disabled' : ''} aria-label="Eliminar bloque">✕</button></div></div>
+      <div class="row" style="margin:10px 0;gap:8px"><span class="small muted">Repeticiones</span>
+        <button class="btn sm" data-bact="minus">−</button><input data-b="reps" inputmode="numeric" value="${b.reps}" style="width:64px;text-align:center"><button class="btn sm" data-bact="plus">＋</button></div>
+      ${segEditor('b' + i + '.work', b.work, 'Trabajo')}
+      ${segEditor('b' + i + '.rest', b.rest, 'Recuperación')}
+      <div class="grid2"><label class="f">Recuperar<select data-b="rk">${Object.entries(REST_KINDS).map(([k, n]) => `<option value="${k}" ${k === b.rk ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      ${i < w.blocks.length - 1 ? `<label class="f">Pausa tras el bloque<input data-b="after" value="${b.after ? fmtTime(b.after) : ''}" placeholder="m:ss (opcional)"></label>` : ''}</div>
+    </div>`).join('')}
+    <button class="btn block" id="ed-addb" style="margin-bottom:12px">＋ Añadir bloque</button>
+    <label class="row optrow"><input type="checkbox" id="ed-cd-on" ${w.cd && w.cd.v > 0 ? 'checked' : ''}> Vuelta a la calma</label>
+    ${w.cd && w.cd.v > 0 ? segEditor('cd', w.cd, 'Vuelta a la calma', { minutes: true }) : ''}
+  </div>`;
 }
-function startStep() {
-  const s = I.steps[I.idx];
-  I.left = s.d; I.endAt = Date.now() + s.d * 1000; I.lastBeep = null;
-  beep(s.k === 'work' ? 1100 : 700, 0.25, s.k === 'work' ? 2 : 1);
-  vib(s.k === 'work' ? [300, 100, 300] : 400);
-  speak(s.k === 'work' ? `${s.n.replace('/', ' de ')}. ¡Vamos!` : s.n);
+function bindEditor(w) {
+  const box = $('#run-int .editor');
+  const commit = () => { save(); renderInt(); };
+  $('#ed-name').onchange = e => { w.name = e.target.value.trim() || 'Mi sesión'; commit(); };
+  $('#ed-type').onchange = e => { w.type = e.target.value; save(); };
+  $('#ed-wu-on').onchange = e => { w.wu = e.target.checked ? T(600, 'E') : T(0); commit(); };
+  $('#ed-cd-on').onchange = e => { w.cd = e.target.checked ? T(600, 'E') : T(0); commit(); };
+  $$('.segbox', box).forEach(sb => sb.onchange = () => {
+    const path = sb.dataset.path;
+    if (path === 'wu' || path === 'cd') w[path] = readSeg(sb, w[path], true);
+    else { const [b, f] = path.slice(1).split('.'); w.blocks[+b][f] = readSeg(sb, w.blocks[+b][f], false); }
+    commit();
+  });
+  $$('.blockbox', box).forEach(bb => {
+    const i = +bb.dataset.block, b = w.blocks[i];
+    bb.querySelectorAll('[data-b]').forEach(el => el.onchange = e => {
+      e.stopPropagation();
+      const f = el.dataset.b;
+      if (f === 'reps') b.reps = clamp(parseInt(el.value) || 1, 1, 99);
+      if (f === 'rk') b.rk = el.value;
+      if (f === 'after') b.after = Math.round(parseTimeSec(el.value));
+      commit();
+    });
+    bb.querySelectorAll('[data-bact]').forEach(el => el.onclick = () => {
+      const a = el.dataset.bact;
+      if (a === 'plus') b.reps = Math.min(99, b.reps + 1);
+      if (a === 'minus') b.reps = Math.max(1, b.reps - 1);
+      if (a === 'dup') w.blocks.splice(i + 1, 0, JSON.parse(JSON.stringify(b)));
+      if (a === 'del' && w.blocks.length > 1) w.blocks.splice(i, 1);
+      if (a === 'up' && i > 0) [w.blocks[i - 1], w.blocks[i]] = [w.blocks[i], w.blocks[i - 1]];
+      commit();
+    });
+  });
+  $('#ed-addb').onclick = () => { w.blocks.push(blk(4, D(400, 'I'), T(90, 'E'))); commit(); };
+}
+
+/* ---- sesión en curso ---- */
+const iElapsed = () => I.acc + (I.state === 'running' ? (Date.now() - I.startAt) / 1000 : 0);
+function intStart(w) {
+  const o = iopts();
+  Object.assign(I, { w, steps: buildSteps(w), idx: -1, acc: 0, startAt: Date.now(), dist: 0, pts: null, buf: [], results: [], gpsOk: false, gpsErr: false, name: w.name });
+  if (!I.steps.length) return toast('La sesión no tiene pasos');
+  beep(660, 0.1); // desbloquea el audio en móviles
+  const needGps = o.gps && !(window.claude && !NATIVE) && 'geolocation' in navigator;
+  if (needGps) I.watch = navigator.geolocation.watchPosition(intPos, () => { I.gpsErr = true; }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+  else I.gpsErr = true;
+  I.state = 'running'; wakeOn();
+  if (o.countdown) { I.pre = 3; I.lastBeep = null; } else { I.pre = 0; nextStep(); }
+  I.timer = setInterval(intTick, 200);
   renderIntLive();
+}
+function intPos(pos) {
+  const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+  I.acc_gps = accuracy;
+  if (accuracy > 30) return;
+  I.gpsOk = true;
+  const p = { lat, lon, t: pos.timestamp };
+  if (I.state !== 'running') { I.last = null; return; }
+  if (I.last) {
+    const d = haversine(I.last, p), dt = (p.t - I.last.t) / 1000;
+    if (d < 2) return;
+    if (dt > 0 && d / dt > 12) return;
+    I.dist += d;
+    I.buf.push({ t: iElapsed(), d: I.dist });
+    while (I.buf.length > 2 && I.buf[I.buf.length - 1].t - I.buf[0].t > 20) I.buf.shift();
+  }
+  I.last = p;
+  intCheck();
+}
+function curPace() { if (I.buf.length < 2) return null; const a = I.buf[0], b = I.buf[I.buf.length - 1]; const p = b.d - a.d > 10 ? (b.t - a.t) / ((b.d - a.d) / 1000) : null; return p > 90 ? p : null; }
+const useGpsDist = () => I.gpsOk && !I.gpsErrFatal;
+function nextStep() {
+  if (I.idx >= 0) {
+    const s = I.steps[I.idx], t = iElapsed() - I.stepT0;
+    const d = useGpsDist() ? I.dist - I.stepD0 : (s.seg.m === 'd' ? s.seg.v : 0);
+    I.results.push({ k: s.k, n: s.n, t, d, target: segPace(s.seg), planned: s.seg });
+  }
+  I.idx++;
+  if (I.idx >= I.steps.length) return intFinish(false);
+  const s = I.steps[I.idx];
+  I.stepT0 = iElapsed(); I.stepD0 = I.dist; I.lastBeep = null; I.coachAt = 200;
+  beep(s.k === 'work' ? 1100 : 700, 0.25, s.k === 'work' ? 2 : 1);
+  ivib(s.k === 'work' ? [300, 100, 300] : 400);
+  const amount = s.seg.m === 'd' ? (s.seg.v >= 1000 ? `${+(s.seg.v / 1000).toFixed(2)} kilómetros`.replace('.', ',') : `${s.seg.v} metros`) : spokenTime(s.seg.v);
+  const pc = segPace(s.seg);
+  ispeak(`${s.n.replace('/', ' de ')}. ${amount}${pc ? `, a ${paceSpeech(pc)} el kilómetro` : ''}.${s.k === 'work' ? ' ¡Vamos!' : ''}`);
+  renderIntLive();
+}
+function spokenTime(sec) { const m = Math.floor(sec / 60), s = Math.round(sec % 60); return [m ? `${m} ${m === 1 ? 'minuto' : 'minutos'}` : '', s ? `${s} segundos` : ''].filter(Boolean).join(' y '); }
+function intCheck() {
+  if (I.state !== 'running' || I.idx < 0) return;
+  const s = I.steps[I.idx];
+  if (s.seg.m === 'd') {
+    if (!useGpsDist()) return;
+    const done = I.dist - I.stepD0, left = s.seg.v - done;
+    // entrenador de ritmo
+    const o = iopts(), target = segPace(s.seg), cp = curPace();
+    if (o.coach && target && cp && done >= I.coachAt && left > 50) {
+      I.coachAt += 200;
+      const r = cp / target;
+      ispeak(r > 1.03 ? `Más rápido. Vas a ${paceSpeech(cp)}` : r < 0.97 ? `Afloja un poco. Vas a ${paceSpeech(cp)}` : 'Buen ritmo');
+    }
+    if (left <= 0) nextStep();
+  }
 }
 function intTick() {
   if (I.state !== 'running') return;
-  I.left = Math.max(0, (I.endAt - Date.now()) / 1000);
-  const sec = Math.ceil(I.left);
-  if (sec <= 3 && sec > 0 && I.lastBeep !== sec) { I.lastBeep = sec; beep(520, 0.1); }
-  if (I.left <= 0) {
-    I.done += I.steps[I.idx].d;
-    I.idx++;
-    if (I.idx >= I.steps.length) return intFinish();
-    startStep();
-  } else renderIntLive();
+  if (I.pre > 0) {
+    const left = 3 - Math.floor((Date.now() - I.startAt) / 1000);
+    if (left !== I.lastBeep && left > 0) { I.lastBeep = left; beep(520, 0.1); ispeak(String(left)); }
+    if (left <= 0) { I.pre = 0; I.acc = 0; I.startAt = Date.now(); I.dist = 0; I.buf = []; nextStep(); return; }
+    return renderIntLive();
+  }
+  const s = I.steps[I.idx];
+  if (s.seg.m === 't') {
+    const left = s.seg.v - (iElapsed() - I.stepT0), sec = Math.ceil(left);
+    if (sec <= 3 && sec > 0 && I.lastBeep !== sec) { I.lastBeep = sec; beep(520, 0.1); }
+    if (left <= 0) return nextStep();
+  } else intCheck();
+  renderIntLive();
 }
 function renderIntLive() {
+  const box = $('#run-int');
+  if (I.pre > 0) { box.innerHTML = `<div class="int-screen" style="border:2px solid var(--accent);background:var(--accent-soft)"><div class="phase">Preparados</div><div class="count">${Math.max(1, 3 - Math.floor((Date.now() - I.startAt) / 1000))}</div><div class="small muted">${esc(I.name)}</div></div>`; return; }
   const s = I.steps[I.idx]; if (!s) return;
   const next = I.steps[I.idx + 1];
-  const el = I.done + (s.d - I.left);
-  $('#run-int').innerHTML = `<div class="int-screen" style="background:color-mix(in srgb,${s.c} 26%,var(--surface));border:2px solid ${s.c}">
-      <div class="phase">${esc(s.n)}</div>
-      <div class="count">${fmtTime(Math.ceil(I.left))}</div>
-      <div class="bar" style="margin:12px 0"><i style="width:${(1 - I.left / s.d) * 100}%;background:${s.c}"></i></div>
-      <div class="small muted">${next ? `Siguiente: <b>${esc(next.n)}</b> · ${fmtTime(next.d)}` : 'Último bloque'}</div>
-    </div>
-    <div class="card" style="margin-top:14px"><div class="row between small"><span>Total ${fmtTime(el)} / ${fmtTime(I.total)}</span><span class="muted">${esc(I.name)}</span></div><div class="bar" style="margin-top:8px"><i style="width:${el / I.total * 100}%"></i></div>
-      <div class="row" style="justify-content:center;margin-top:14px">
-        <button class="btn" id="in-pause">${I.state === 'paused' ? '▶ Seguir' : '⏸ Pausa'}</button><button class="btn" id="in-skip">⏭ Saltar</button><button class="btn danger" id="in-stop">⏹ Parar</button></div></div>`;
-  $('#in-pause').onclick = () => { if (I.state === 'running') { I.state = 'paused'; } else { I.state = 'running'; I.endAt = Date.now() + I.left * 1000; } renderIntLive(); };
-  $('#in-skip').onclick = () => { I.done += s.d - I.left; I.idx++; if (I.idx >= I.steps.length) intFinish(); else { if (I.state === 'paused') I.state = 'running'; startStep(); } };
-  $('#in-stop').onclick = async () => { if (await ask('¿Parar la sesión?')) intFinish(true); };
-}
-async function intFinish(aborted) {
-  clearInterval(I.timer); wakeOff();
-  const s = I.steps[I.idx];
-  const el = I.done + (s ? s.d - I.left : 0);
-  I.state = 'idle';
-  beep(880, 0.4, 3); speak(aborted ? 'Sesión detenida' : '¡Sesión completada! Gran trabajo.');
-  renderInt();
-  if (el > 60 && await ask('¿Registrar esta sesión en tu diario? Después introduce la distancia.', 'Registrar')) {
-    const isHill = /Cuestas/.test(I.name);
-    openRunForm({ date: todayStr(), type: isHill ? 'cuestas' : /Umbral/.test(I.name) ? 'tempo' : /Fartlek/.test(I.name) ? 'fartlek' : 'series', dur: Math.round(el), notes: I.name });
+  const el = iElapsed(), inStep = el - I.stepT0;
+  const target = segPace(s.seg), cp = useGpsDist() ? curPace() : null;
+  let big, prog, hint = '';
+  if (s.seg.m === 't') {
+    const left = Math.max(0, s.seg.v - inStep); big = fmtTime(Math.ceil(left)); prog = 1 - left / s.seg.v;
+  } else if (useGpsDist()) {
+    const left = Math.max(0, s.seg.v - (I.dist - I.stepD0)); big = fmtDist(left); prog = 1 - left / s.seg.v;
+  } else {
+    big = fmtTime(inStep); prog = 0; hint = `<div class="small" style="margin-top:6px">${I.gpsErr ? 'Sin GPS' : 'Buscando GPS…'}: pulsa <b>«✓ Hecho»</b> al completar ${fmtDist(s.seg.v)}</div>`;
   }
+  let paceRow = '';
+  if (target || cp) {
+    const r = cp && target ? cp / target : null;
+    const col = !r ? 'var(--text)' : r > 1.03 ? 'var(--warn)' : r < 0.97 ? 'var(--z1)' : 'var(--good)';
+    paceRow = `<div class="grid2" style="margin-top:12px"><div class="stat"><div class="k">Ritmo actual</div><div class="v num" style="color:${col}">${cp ? fmtPace(cp) : '--:--'}</div></div><div class="stat"><div class="k">Objetivo</div><div class="v num">${target ? fmtPace(target) : 'libre'}</div></div></div>`;
+  }
+  const sub = s.seg.m === 'd' ? `${fmtDist(s.seg.v)} · ${fmtTime(inStep)} en el tramo` : `${fmtTime(s.seg.v)}${useGpsDist() ? ` · ${fmtDist(I.dist - I.stepD0)} recorridos` : ''}`;
+  const totT = I.steps.reduce((a, st) => a + segEst(st.seg)[0], 0);
+  box.innerHTML = `<div class="int-screen" style="background:color-mix(in srgb,${s.c} 26%,var(--surface));border:2px solid ${s.c}">
+      <div class="phase">${esc(s.n)}</div>
+      <div class="count">${big}</div>
+      <div class="small muted">${sub}</div>${hint}
+      <div class="bar" style="margin:12px 0"><i style="width:${clamp(prog, 0, 1) * 100}%;background:${s.c}"></i></div>
+      <div class="small muted">${next ? `Siguiente: <b>${esc(next.n)}</b> · ${fmtSeg(next.seg)} ${esc(paceLabel(next.seg))}` : 'Último paso'}</div>
+      ${paceRow}
+    </div>
+    <div class="card" style="margin-top:14px"><div class="row between small"><span>Total ${fmtTime(el)}${useGpsDist() ? ` · ${fmtDist(I.dist)}` : ''}</span><span class="muted">Paso ${I.idx + 1}/${I.steps.length}</span></div><div class="bar" style="margin-top:8px"><i style="width:${clamp(el / totT, 0, 1) * 100}%"></i></div>
+      <div class="row" style="justify-content:center;margin-top:14px">
+        <button class="btn" id="in-pause">${I.state === 'paused' ? '▶ Seguir' : '⏸ Pausa'}</button><button class="btn ${s.seg.m === 'd' && !useGpsDist() ? 'pri' : ''}" id="in-skip">${s.seg.m === 'd' && !useGpsDist() ? '✓ Hecho' : '⏭ Saltar'}</button><button class="btn danger" id="in-stop">⏹ Parar</button></div></div>`;
+  $('#in-pause').onclick = () => { if (I.state === 'running') { I.acc = iElapsed(); I.state = 'paused'; I.last = null; I.buf = []; } else { I.state = 'running'; I.startAt = Date.now(); } renderIntLive(); };
+  $('#in-skip').onclick = () => { if (I.state === 'paused') { I.state = 'running'; I.startAt = Date.now(); } nextStep(); };
+  $('#in-stop').onclick = async () => { if (await ask('¿Parar la sesión?', 'Parar')) intFinish(true); };
+}
+function intFinish(aborted) {
+  clearInterval(I.timer); wakeOff();
+  if (I.watch != null) { navigator.geolocation.clearWatch(I.watch); I.watch = null; }
+  if (aborted && I.idx >= 0 && I.idx < I.steps.length) {
+    const s = I.steps[I.idx];
+    I.results.push({ k: s.k, n: s.n + ' (parcial)', t: iElapsed() - I.stepT0, d: useGpsDist() ? I.dist - I.stepD0 : 0, target: segPace(s.seg), planned: s.seg });
+  }
+  I.total = iElapsed();
+  I.state = 'done';
+  beep(880, 0.4, 3); ispeak(aborted ? 'Sesión detenida' : '¡Sesión completada! Gran trabajo.');
+  renderInt();
+}
+function renderIntDone() {
+  const work = I.results.filter(r => r.k === 'work');
+  const gpsD = useGpsDist() ? I.dist : 0;
+  const estD = I.results.reduce((a, r) => a + (r.d || (r.planned.m === 't' ? segEst(r.planned)[1] : 0)), 0);
+  const rows = work.map(r => {
+    const pace = r.d > 0 ? r.t / (r.d / 1000) : null;
+    const diff = pace && r.target ? pace - r.target : null;
+    return `<tr><td>${esc(r.n)}</td><td class="num">${r.d ? fmtDist(r.d) : '—'}</td><td class="num"><b>${fmtTime(r.t)}</b></td><td class="num">${pace ? fmtPace(pace) : '—'}${diff != null ? ` <span class="small" style="color:${Math.abs(diff) <= r.target * 0.03 ? 'var(--good)' : diff > 0 ? 'var(--warn)' : 'var(--z1)'}">${diff > 0 ? '+' : '−'}${Math.round(Math.abs(diff))}s</span>` : ''}</td></tr>`;
+  }).join('');
+  $('#run-int').innerHTML = `<div class="card hero"><h2 style="margin:0 0 4px">✅ ${esc(I.name)}</h2>
+    <div class="grid3" style="margin-top:10px"><div class="stat"><div class="k">Tiempo</div><div class="v">${fmtTime(I.total)}</div></div><div class="stat"><div class="k">Distancia</div><div class="v">${fmtDist(gpsD || estD)}</div></div><div class="stat"><div class="k">Series</div><div class="v">${work.length}</div></div></div>
+    ${gpsD ? '' : '<p class="small muted">Distancia estimada (sin GPS). Puedes corregirla al registrar.</p>'}</div>
+    ${rows ? `<div class="card"><h3>Resultados por serie</h3><div style="overflow-x:auto"><table class="t"><tr><th>Serie</th><th>Dist.</th><th>Tiempo</th><th>Ritmo</th></tr>${rows}</table></div><p class="small muted">Diferencia frente al ritmo objetivo: verde = en ritmo (±3 %).</p></div>` : ''}
+    <div class="row"><button class="btn pri" id="dn-log">✍️ Registrar en el diario</button><button class="btn" id="dn-back">Volver</button></div>`;
+  $('#dn-back').onclick = () => { I.state = 'idle'; renderInt(); };
+  $('#dn-log').onclick = () => {
+    const km = +((gpsD || estD) / 1000).toFixed(2);
+    const notes = `${I.name}. ` + work.map(r => fmtTime(r.t)).join(', ');
+    I.state = 'idle'; renderInt();
+    openRunForm({ date: todayStr(), type: I.w.type || 'series', dist: km, dur: Math.round(I.total), notes, splits: null });
+  };
 }
 
 /* =================== PERFIL =================== */
@@ -1326,6 +1610,7 @@ $('#btn-profile').onclick = () => {
 };
 
 /* =================== Inicio =================== */
+bindGpsOpts();
 render();
 if (!NATIVE && 'serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('service-worker.js').catch(() => { });
 </script>
