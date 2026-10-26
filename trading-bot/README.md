@@ -48,7 +48,7 @@ python backtest.py precios.csv     # o con un CSV propio: date,SPY,QQQ,GLD,SGOV
 | `safe_asset` | Dónde va lo que sale del mercado (`""` = efectivo) |
 | `sma_window` | Días de la media móvil del filtro de tendencia |
 | `min_drift` | Desvío mínimo (fracción) para rebalancear |
-| `min_order_usd` | Orden mínima en USD |
+| `min_order_usd` | Orden mínima en USD (Alpaca acepta desde $1, así que funciona con cuentas de $10) |
 | `max_invested_usd` | Tope de capital que maneja el bot |
 | `halt_if_equity_below_usd` | Freno de emergencia (0 = desactivado) |
 

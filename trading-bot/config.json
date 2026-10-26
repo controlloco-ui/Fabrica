@@ -7,7 +7,7 @@
   "safe_asset": "SGOV",
   "sma_window": 200,
   "min_drift": 0.05,
-  "min_order_usd": 5,
+  "min_order_usd": 1,
   "max_invested_usd": 1000,
   "halt_if_equity_below_usd": 0
 }
