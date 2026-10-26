@@ -1,0 +1,45 @@
+name: Bot de inversión
+
+on:
+  # Lunes a viernes, ~30-90 min antes del cierre de Wall Street (según horario de verano)
+  schedule:
+    - cron: '35 19 * * 1-5'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'trading-bot/**'
+      - '.github/workflows/trading-bot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r trading-bot/requirements.txt pytest
+      - run: python -m pytest -q trading-bot/tests
+
+  operar:
+    needs: test
+    # Solo opera si definiste la variable BOT_MODE (dry-run, paper o live) en el repositorio
+    if: ${{ github.event_name != 'push' && vars.BOT_MODE != '' }}
+    runs-on: ubuntu-latest
+    concurrency: trading-bot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r trading-bot/requirements.txt
+      - name: Ejecutar bot
+        env:
+          BOT_MODE: ${{ vars.BOT_MODE }}
+          LIVE_CONFIRM: ${{ vars.LIVE_CONFIRM }}
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+        run: python trading-bot/bot.py

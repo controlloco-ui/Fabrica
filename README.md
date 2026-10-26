@@ -13,3 +13,7 @@ PWA instalable y sin conexión (abre `runner/index.html`). Los datos se guardan 
 - **Diario**: registro con RPE, FC, zapatillas y notas; estadísticas (volumen semanal, distribución por intensidad, mejores marcas) y control de kilometraje de zapatillas.
 - **Calcular**: VDOT de Daniels con ritmos E/M/T/I/R y predicción de marcas (y Riegel), ritmo/tiempo/distancia, zonas de FC (Karvonen + Tanaka), parciales con negative split, nutrición e hidratación en carrera, conversor ritmo/velocidad.
 - **Guía**: principios, tipos de entreno, calentamiento, fuerza, prevención de lesiones, nutrición, técnica y checklist de carrera, con fuentes.
+
+## Bot de inversión automatizado (`trading-bot/`)
+
+Bot que invierte en ETFs vía Alpaca con filtro de tendencia, programado en GitHub Actions. Empieza en modo simulación/práctica. Ver [`trading-bot/README.md`](trading-bot/README.md).
