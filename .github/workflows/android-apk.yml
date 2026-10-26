@@ -22,7 +22,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest ya trae el SDK de Android (ANDROID_HOME); Gradle instala la plataforma que falte
+      - name: Comprobar SDK de Android
+        run: echo "ANDROID_HOME=$ANDROID_HOME" && ls "$ANDROID_HOME"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
