@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Zancada — Entrenamiento Runner</title>
+<title>Zancada</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#13151a">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -18,11 +18,12 @@
   --accent:#ff6b35; --accent-soft:#ff6b3522; --on-accent:#1b0d04;
   --z1:#6aa6e8; --z2:#52c287; --z3:#e8c547; --z4:#f08a3c; --z5:#e0685a;
   --bad:#e0685a; --good:#52c287; --warn:#e8c547;
+  color-scheme:dark;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
     --bg:#f3f1ec; --surface:#ffffff; --surface2:#f2f0ea; --line:#e2ded3; --text:#1c1e24; --muted:#666b78;
-    --accent:#e2541f; --accent-soft:#e2541f1c; --on-accent:#fff;
+    --accent:#e2541f; --accent-soft:#e2541f1c; --on-accent:#fff; color-scheme:light;
   }
 }
 :root[data-theme="dark"]{--bg:#13151a;--surface:#1b1e25;--surface2:#242832;--line:#333845;--text:#ece9e2;--muted:#8d92a0;--accent:#ff6b35;--accent-soft:#ff6b3522;--on-accent:#1b0d04}
@@ -212,6 +213,7 @@ svg text{fill:var(--muted);font-size:10px;font-family:Inter,sans-serif}
 </div></nav>
 
 <dialog id="dlg"><div class="dh"><h3 id="dlg-title"></h3><button class="icon-btn" data-close aria-label="Cerrar">✕</button></div><div class="db" id="dlg-body"></div></dialog>
+<dialog id="ask"><div class="db"><p id="ask-msg" style="margin:0 0 16px;font-weight:600"></p><div class="row" style="justify-content:flex-end"><button class="btn" id="ask-no">Cancelar</button><button class="btn pri" id="ask-yes">Sí</button></div></div></dialog>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -525,6 +527,17 @@ function render() {
 const dlg = $('#dlg');
 function openDlg(title, html, onMount) { $('#dlg-title').textContent = title; $('#dlg-body').innerHTML = html; dlg.showModal(); onMount && onMount($('#dlg-body')); }
 function closeDlg() { dlg.close(); }
+// Confirmación dentro de la página (el visor de claude.ai bloquea confirm())
+function ask(msg, yes = 'Sí') {
+  const d = $('#ask');
+  $('#ask-msg').textContent = msg; $('#ask-yes').textContent = yes;
+  d.showModal();
+  return new Promise(res => {
+    const done = v => { d.close(); $('#ask-yes').onclick = $('#ask-no').onclick = d.oncancel = null; res(v); };
+    $('#ask-yes').onclick = () => done(true); $('#ask-no').onclick = () => done(false);
+    d.oncancel = e => { e.preventDefault(); done(false); };
+  });
+}
 dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[data-close]')) closeDlg(); });
 
 /* =================== Tema =================== */
@@ -677,7 +690,7 @@ function openRunForm(r = {}) {
       S.runs.sort((a, b) => b.date.localeCompare(a.date));
       save(); closeDlg(); toast(editing ? 'Actualizado' : '¡Entreno registrado! 💪'); render();
     };
-    if (editing) $('#rf-del', b).onclick = () => { if (!confirm('¿Eliminar este entrenamiento?')) return; unlinkRun(r.id); S.runs = S.runs.filter(x => x.id !== r.id); save(); closeDlg(); render(); };
+    if (editing) $('#rf-del', b).onclick = async () => { if (!await ask('¿Eliminar este entrenamiento?')) return; unlinkRun(r.id); S.runs = S.runs.filter(x => x.id !== r.id); save(); closeDlg(); render(); };
   });
 }
 function unlinkRun(id) { if (!S.plan) return; S.plan.weeks.forEach(w => w.days.forEach(d => { if (d.runId === id) { d.done = false; d.runId = null; } })); }
@@ -714,9 +727,9 @@ function renderPlan() {
     ${weeks}
     <div class="row" style="margin-top:14px"><button class="btn" id="pl-regen">🔄 Regenerar con mis ritmos</button><button class="btn danger" id="pl-del">Eliminar plan</button></div>`;
   v.querySelectorAll('[data-pday]').forEach(el => el.onclick = () => showPlanDay(el.dataset.pday));
-  $('#pl-del').onclick = () => { if (confirm('¿Eliminar el plan? Tu diario de entrenos se mantiene.')) { S.plan = null; save(); render(); } };
-  $('#pl-regen').onclick = () => {
-    if (!confirm('Se regenerará el plan con tus ritmos y perfil actuales. Se conservan los entrenos marcados como hechos.')) return;
+  $('#pl-del').onclick = async () => { if (await ask('¿Eliminar el plan? Tu diario de entrenos se mantiene.')) { S.plan = null; save(); render(); } };
+  $('#pl-regen').onclick = async () => {
+    if (!await ask('Se regenerará el plan con tus ritmos y perfil actuales. Se conservan los entrenos marcados como hechos.')) return;
     const old = S.plan; const np = generatePlan({ goal: old.goal, raceDate: old.raceDate, level: old.level, days: old.days, target: old.target, name: old.name, curKm: old.curKm });
     np.curKm = old.curKm;
     np.weeks.forEach(w => w.days.forEach(d => { const o = old.weeks.flatMap(x => x.days).find(x => x.date === d.date); if (o && o.done) { d.done = true; d.runId = o.runId; } }));
@@ -866,7 +879,7 @@ function shoesHtml() {
 function bindShoes() {
   $('#sh-add').onclick = () => { const n = $('#sh-name').value.trim(); if (!n) return toast('Pon un nombre'); S.shoes.push({ id: uid(), name: n, startKm: num($('#sh-start').value) || 0, limit: parseInt($('#sh-limit').value) || 700, retired: false }); save(); renderDiario(); };
   $$('[data-ret]').forEach(b => b.onclick = () => { const s = S.shoes.find(x => x.id === b.dataset.ret); s.retired = !s.retired; save(); renderDiario(); });
-  $$('[data-shdel]').forEach(b => b.onclick = () => { if (!confirm('¿Eliminar zapatillas?')) return; S.shoes = S.shoes.filter(x => x.id !== b.dataset.shdel); S.runs.forEach(r => { if (r.shoeId === b.dataset.shdel) r.shoeId = null; }); save(); renderDiario(); });
+  $$('[data-shdel]').forEach(b => b.onclick = async () => { if (!await ask('¿Eliminar zapatillas?')) return; S.shoes = S.shoes.filter(x => x.id !== b.dataset.shdel); S.runs.forEach(r => { if (r.shoeId === b.dataset.shdel) r.shoeId = null; }); save(); renderDiario(); });
 }
 
 /* =================== HERRAMIENTAS =================== */
@@ -1134,6 +1147,7 @@ function onPos(pos) {
   drawTrack();
 }
 function gStart() {
+  if (window.claude && !NATIVE) return toast('El GPS no está disponible en esta vista. Usa la app Android o la web publicada.');
   if (!('geolocation' in navigator)) return toast('Este dispositivo no tiene GPS disponible');
   Object.assign(G, { pts: [], dist: 0, elapsed: 0, splits: [], lastSplitT: 0, buf: [], nextKm: 1 });
   G.watch = navigator.geolocation.watchPosition(onPos, err => toast('GPS: ' + (err.code === 1 ? 'permiso denegado' : 'sin señal')), { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
@@ -1143,9 +1157,9 @@ function gStart() {
 }
 function gPause() { G.elapsed = gElapsed(); G.state = 'paused'; G.buf = []; const l = G.pts[G.pts.length - 1]; if (l) l.gap = true; renderGps(); }
 function gResume() { G.state = 'running'; G.startAt = Date.now(); renderGps(); }
-function gStop() {
+async function gStop() {
   const e = gElapsed();
-  if (!confirm('¿Terminar la actividad?')) return;
+  if (!await ask('¿Terminar la actividad?', 'Terminar')) return;
   navigator.geolocation.clearWatch(G.watch); clearInterval(G.timer); wakeOff();
   G.elapsed = e; G.state = 'idle'; renderGps();
   const km = G.dist / 1000;
@@ -1257,16 +1271,16 @@ function renderIntLive() {
         <button class="btn" id="in-pause">${I.state === 'paused' ? '▶ Seguir' : '⏸ Pausa'}</button><button class="btn" id="in-skip">⏭ Saltar</button><button class="btn danger" id="in-stop">⏹ Parar</button></div></div>`;
   $('#in-pause').onclick = () => { if (I.state === 'running') { I.state = 'paused'; } else { I.state = 'running'; I.endAt = Date.now() + I.left * 1000; } renderIntLive(); };
   $('#in-skip').onclick = () => { I.done += s.d - I.left; I.idx++; if (I.idx >= I.steps.length) intFinish(); else { if (I.state === 'paused') I.state = 'running'; startStep(); } };
-  $('#in-stop').onclick = () => { if (confirm('¿Parar la sesión?')) intFinish(true); };
+  $('#in-stop').onclick = async () => { if (await ask('¿Parar la sesión?')) intFinish(true); };
 }
-function intFinish(aborted) {
+async function intFinish(aborted) {
   clearInterval(I.timer); wakeOff();
   const s = I.steps[I.idx];
   const el = I.done + (s ? s.d - I.left : 0);
   I.state = 'idle';
   beep(880, 0.4, 3); speak(aborted ? 'Sesión detenida' : '¡Sesión completada! Gran trabajo.');
   renderInt();
-  if (el > 60 && confirm('¿Registrar esta sesión en tu diario? (introduce la distancia)')) {
+  if (el > 60 && await ask('¿Registrar esta sesión en tu diario? Después introduce la distancia.', 'Registrar')) {
     const isHill = /Cuestas/.test(I.name);
     openRunForm({ date: todayStr(), type: isHill ? 'cuestas' : /Umbral/.test(I.name) ? 'tempo' : /Fartlek/.test(I.name) ? 'fartlek' : 'series', dur: Math.round(el), notes: I.name });
   }
@@ -1296,6 +1310,10 @@ $('#btn-profile').onclick = () => {
     };
     $('#pr-exp', b).onclick = () => {
       if (NATIVE) return NATIVE.shareText(`zancada-${todayStr()}.json`, JSON.stringify(S));
+      if (window.claude && window.claude.use) {
+        window.claude.use('downloads').then(dl => dl ? dl.save({ filename: `zancada-${todayStr()}.json`, data: JSON.stringify(S, null, 1) }) : toast('Exportar no está disponible aquí')).catch(() => toast('No se pudo exportar'));
+        return;
+      }
       const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `zancada-${todayStr()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     };
@@ -1303,7 +1321,7 @@ $('#btn-profile').onclick = () => {
       const f = e.target.files[0]; if (!f) return;
       f.text().then(t => { const d = JSON.parse(t); if (!d || !Array.isArray(d.runs)) throw 0; S = { ...defaults(), ...d, profile: { ...defaults().profile, ...(d.profile || {}) } }; save(); applyTheme(); closeDlg(); render(); toast('Datos importados'); }).catch(() => toast('Archivo no válido'));
     };
-    $('#pr-reset', b).onclick = () => { if (confirm('¿Borrar TODOS los datos? No se puede deshacer.')) { S = defaults(); save(); applyTheme(); closeDlg(); render(); } };
+    $('#pr-reset', b).onclick = async () => { if (await ask('¿Borrar TODOS los datos? No se puede deshacer.')) { S = defaults(); save(); applyTheme(); closeDlg(); render(); } };
   });
 };
 
