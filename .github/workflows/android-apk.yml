@@ -33,7 +33,7 @@ jobs:
       - name: Copiar la web a los assets
         run: |
           mkdir -p android/app/src/main/assets
-          cp runner/index.html runner/manifest.json runner/icon-*.png android/app/src/main/assets/
+          cp -r runner/index.html runner/manifest.json runner/icon-*.png runner/vendor android/app/src/main/assets/
 
       - name: Compilar APK
         working-directory: android

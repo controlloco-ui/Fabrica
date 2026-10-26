@@ -11,6 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<script src="vendor/leaflet.js"></script>
 <style>
 :root{
   --bg:#13151a; --surface:#1b1e25; --surface2:#242832; --line:#333845;
@@ -18,17 +20,19 @@
   --accent:#ff6b35; --accent-soft:#ff6b3522; --on-accent:#1b0d04;
   --z1:#6aa6e8; --z2:#52c287; --z3:#e8c547; --z4:#f08a3c; --z5:#e0685a;
   --bad:#e0685a; --good:#52c287; --warn:#e8c547;
+  --tile-filter:invert(.92) hue-rotate(180deg) brightness(.95) contrast(.9);
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
     --bg:#f3f1ec; --surface:#ffffff; --surface2:#f2f0ea; --line:#e2ded3; --text:#1c1e24; --muted:#666b78;
-    --accent:#e2541f; --accent-soft:#e2541f1c; --on-accent:#fff; color-scheme:light;
+    --accent:#e2541f; --accent-soft:#e2541f1c; --on-accent:#fff; --tile-filter:none; color-scheme:light;
   }
 }
-:root[data-theme="dark"]{--bg:#13151a;--surface:#1b1e25;--surface2:#242832;--line:#333845;--text:#ece9e2;--muted:#8d92a0;--accent:#ff6b35;--accent-soft:#ff6b3522;--on-accent:#1b0d04}
-:root[data-theme="light"]{--bg:#f3f1ec;--surface:#fff;--surface2:#f2f0ea;--line:#e2ded3;--text:#1c1e24;--muted:#666b78;--accent:#e2541f;--accent-soft:#e2541f1c;--on-accent:#fff}
+:root[data-theme="dark"]{--tile-filter:invert(.92) hue-rotate(180deg) brightness(.95) contrast(.9);--bg:#13151a;--surface:#1b1e25;--surface2:#242832;--line:#333845;--text:#ece9e2;--muted:#8d92a0;--accent:#ff6b35;--accent-soft:#ff6b3522;--on-accent:#1b0d04}
+:root[data-theme="light"]{--tile-filter:none;--bg:#f3f1ec;--surface:#fff;--surface2:#f2f0ea;--line:#e2ded3;--text:#1c1e24;--muted:#666b78;--accent:#e2541f;--accent-soft:#e2541f1c;--on-accent:#fff}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:15px;line-height:1.45;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 h1,h2,h3,.num{font-family:'Space Grotesk',system-ui,sans-serif}
 h2{font-size:20px;margin:0 0 12px;letter-spacing:-.01em}
@@ -156,6 +160,15 @@ dialog .db{padding:16px}
 .segrow>select[data-f="u"]{flex:0 0 64px}
 .blockbox{border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:14px;padding:12px;margin-bottom:10px;background:var(--surface2)}
 .optrow{gap:8px;padding:6px 0;font-size:14px;font-weight:500;cursor:pointer}
+/* mapas */
+.map{height:280px;width:100%;background:var(--surface2);z-index:0}
+.map.osm .leaflet-tile-pane{filter:var(--tile-filter)}
+.leaflet-container{font-family:inherit}
+.km-pin span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#fff;color:#111;font:700 11px/1 Inter,sans-serif;border:2px solid #111;box-shadow:0 1px 4px #0006}
+.flag-pin span{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;color:#fff;font-size:11px;border:3px solid #fff;box-shadow:0 1px 4px #0008}
+.flag-pin.start span{background:#2e9e5b}.flag-pin.end span{background:#222}
+.ring{display:flex;align-items:center;gap:14px}
+i.lg{display:inline-block;width:14px;height:6px;border-radius:3px;margin-right:5px;vertical-align:middle}
 svg text{fill:var(--muted);font-size:10px;font-family:Inter,sans-serif}
 </style>
 </head>
@@ -195,9 +208,9 @@ svg text{fill:var(--muted);font-size:10px;font-family:Inter,sans-serif}
           <label class="f">Meta (km)<input id="g-goal" inputmode="decimal" placeholder="opcional"></label>
         </div>
       </div>
-      <div class="card"><h3>Recorrido</h3><svg class="track" id="g-track" viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div class="card" style="padding:0;overflow:hidden;position:relative"><div id="g-map" class="map"></div><button class="btn sm" id="g-center" hidden style="position:absolute;left:12px;bottom:12px;z-index:500">◎ Centrar</button><svg class="track" id="g-track" viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet" style="display:none;margin:12px;width:calc(100% - 24px)"></svg></div>
       <div class="card"><h3>Parciales por km</h3><div id="g-splits"><div class="muted small">Aparecerán al completar cada kilómetro.</div></div></div>
-      <p class="small muted">El GPS necesita conexión HTTPS y permiso de ubicación. Mantén la pantalla encendida (la app lo solicita automáticamente cuando el navegador lo permite).</p>
+      <p class="small muted">En la app Android todo sigue funcionando con la pantalla apagada: verás una notificación mientras graba. En el navegador, mantén la pantalla encendida. El mapa necesita datos móviles; sin conexión el recorrido se graba igual.</p>
     </div>
     <div id="run-int" style="display:none"></div>
   </section>
@@ -213,6 +226,9 @@ svg text{fill:var(--muted);font-size:10px;font-family:Inter,sans-serif}
 
   <!-- GUIA -->
   <section class="view" id="v-guia"></section>
+
+  <!-- RESUMEN de un entrenamiento -->
+  <section class="view" id="v-resumen"></section>
 </main>
 
 <nav class="bottom"><div class="wrap">
@@ -294,7 +310,10 @@ function load() {
   return defaults();
 }
 let S = load();
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch (e) { if (e && e.name === 'QuotaExceededError') toast('Memoria llena: exporta una copia y borra entrenos antiguos con recorrido'); }
+}
 
 /* =================== Tipos de entrenamiento =================== */
 const TYPES = {
@@ -532,6 +551,7 @@ function go(v) {
 }
 $$('nav.bottom button').forEach(b => b.onclick = () => go(b.dataset.v));
 function render() {
+  if (current === 'resumen') return;
   ({ hoy: renderHoy, plan: renderPlan, diario: renderDiario, herr: renderHerr, guia: renderGuia, correr: renderCorrer })[current]();
 }
 
@@ -652,17 +672,18 @@ function bindHoy() {
     if (a === 'vdot') { go('herr'); setTimeout(() => { const d = $('#acc-vdot'); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth' }); } }, 50); }
   });
   v.querySelectorAll('[data-day]').forEach(el => el.onclick = () => showPlanDay(el.dataset.day));
-  v.querySelectorAll('[data-run]').forEach(el => el.onclick = () => openRunForm(S.runs.find(r => r.id === el.dataset.run)));
+  v.querySelectorAll('[data-run]').forEach(el => el.onclick = () => openRun(el.dataset.run));
 }
 function prefillFromPlan(date) { const p = planDay(date); return p && p.type !== 'descanso' ? { type: p.type, dist: p.km || '' } : {}; }
 
 /* =================== Registro de carreras =================== */
+function openRun(id) { const r = S.runs.find(x => x.id === id); if (!r) return; if (r.track && r.track.length > 1) { closeDlg(); showSummary(r); } else openRunForm(r); }
 function runItem(r) {
   const T = TYPES[r.type] || TYPES.suave;
   const shoe = S.shoes.find(s => s.id === r.shoeId);
   return `<div class="item" data-run="${r.id}"><div class="dotbig" style="background:color-mix(in srgb,${T.c} 22%,transparent)">${T.ic}</div>
     <div class="main"><div class="t">${round1(r.dist)} km · ${fmtTime(r.dur)} <span class="muted" style="font-weight:500">· ${fmtPace(r.dur / r.dist)}/km</span></div>
-    <div class="s">${fmtDate(r.date)} · ${T.label}${r.rpe ? ` · RPE ${r.rpe}` : ''}${r.hr ? ` · ${r.hr} ppm` : ''}${shoe ? ` · 👟 ${esc(shoe.name)}` : ''}</div>
+    <div class="s">${r.track && r.track.length > 1 ? '🗺️ ' : ''}${fmtDate(r.date)} · ${T.label}${r.rpe ? ` · RPE ${r.rpe}` : ''}${r.hr ? ` · ${r.hr} ppm` : ''}${shoe ? ` · 👟 ${esc(shoe.name)}` : ''}</div>
     ${r.notes ? `<div class="s" style="font-style:italic">“${esc(r.notes)}”</div>` : ''}</div></div>`;
 }
 function openRunForm(r = {}) {
@@ -695,14 +716,15 @@ function openRunForm(r = {}) {
     $('#rf-save', b).onclick = () => {
       const dist = num($('#rf-dist', b).value), dur = parseTime($('#rf-dur', b).value);
       if (!(dist > 0) || !(dur > 0)) return toast('Introduce distancia y duración');
-      const obj = { id: r.id || uid(), date: $('#rf-date', b).value || todayStr(), type: $('#rf-type', b).value, dist, dur, rpe: +$('#rf-rpe', b).value, hr: parseInt($('#rf-hr', b).value) || null, shoeId: $('#rf-shoe', b).value || null, notes: $('#rf-notes', b).value.trim(), splits: r.splits || null };
+      const obj = { id: r.id || uid(), date: $('#rf-date', b).value || todayStr(), type: $('#rf-type', b).value, dist, dur, rpe: +$('#rf-rpe', b).value, hr: parseInt($('#rf-hr', b).value) || null, shoeId: $('#rf-shoe', b).value || null, notes: $('#rf-notes', b).value.trim(), splits: r.splits || null, track: r.track || null, t0: r.t0 || null, tgt: r.tgt || null, goal: r.goal || null };
       if (editing) { unlinkRun(r.id); S.runs = S.runs.map(x => x.id === r.id ? obj : x); } else S.runs.push(obj);
       const pd = planDay(obj.date);
       if (pd && pd.type !== 'descanso' && !pd.done) { pd.done = true; pd.runId = obj.id; }
       S.runs.sort((a, b) => b.date.localeCompare(a.date));
-      save(); closeDlg(); toast(editing ? 'Actualizado' : '¡Entreno registrado! 💪'); render();
+      save(); closeDlg(); toast(editing ? 'Actualizado' : '¡Entreno registrado! 💪');
+      if (obj.track && obj.track.length > 1) showSummary(obj); else render();
     };
-    if (editing) $('#rf-del', b).onclick = async () => { if (!await ask('¿Eliminar este entrenamiento?')) return; unlinkRun(r.id); S.runs = S.runs.filter(x => x.id !== r.id); save(); closeDlg(); render(); };
+    if (editing) $('#rf-del', b).onclick = async () => { if (!await ask('¿Eliminar este entrenamiento?')) return; unlinkRun(r.id); S.runs = S.runs.filter(x => x.id !== r.id); save(); closeDlg(); if (current === 'resumen') go('diario'); else render(); };
   });
 }
 function unlinkRun(id) { if (!S.plan) return; S.plan.weeks.forEach(w => w.days.forEach(d => { if (d.runId === id) { d.done = false; d.runId = null; } })); }
@@ -796,7 +818,7 @@ function showPlanDay(date) {
     const runs = S.runs.filter(r => r.date === date);
     return openDlg(fmtDate(date), `${runs.length ? `<div class="list">${runs.map(runItem).join('')}</div>` : '<div class="empty">Sin entrenamiento programado.</div>'}<button class="btn pri block" id="pd-log" style="margin-top:12px">✍️ Registrar entrenamiento</button>`, b => {
       $('#pd-log', b).onclick = () => { closeDlg(); openRunForm({ date }); };
-      b.querySelectorAll('[data-run]').forEach(el => el.onclick = () => { closeDlg(); openRunForm(S.runs.find(r => r.id === el.dataset.run)); });
+      b.querySelectorAll('[data-run]').forEach(el => el.onclick = () => { closeDlg(); openRun(el.dataset.run); });
     });
   }
   const T = TYPES[d.type];
@@ -849,7 +871,7 @@ function renderDiario() {
     }
     body.innerHTML = html;
     $('#di-add').onclick = () => openRunForm({ date: todayStr(), ...prefillFromPlan(todayStr()) });
-    body.querySelectorAll('[data-run]').forEach(el => el.onclick = () => openRunForm(S.runs.find(r => r.id === el.dataset.run)));
+    body.querySelectorAll('[data-run]').forEach(el => el.onclick = () => openRun(el.dataset.run));
   } else if (diarioTab === 'stats') body.innerHTML = statsHtml();
   else { body.innerHTML = shoesHtml(); bindShoes(); }
 }
@@ -1069,35 +1091,146 @@ function renderGuia() {
 }
 
 /* =================== CORRER: GPS =================== */
-const G = { state: 'idle', pts: [], dist: 0, elapsed: 0, startAt: 0, watch: null, timer: null, splits: [], lastSplitT: 0, buf: [], acc: null, wake: null, nextKm: 1 };
-function setRunSeg(s) {
-  $$('#run-seg button').forEach(b => b.classList.toggle('active', b.dataset.s === s));
-  $('#run-gps').style.display = s === 'gps' ? '' : 'none';
-  $('#run-int').style.display = s === 'int' ? '' : 'none';
-  if (s === 'int') renderInt();
+// En la app Android (WebView) se usan las funciones nativas de window.Android
+const NATIVE = window.Android || null;
+const IN_CLAUDE = !!(window.claude && !NATIVE);
+const HAS_MAP = typeof window.L !== 'undefined' && !IN_CLAUDE;
+// El servicio nativo llama a zNative.tick() cada segundo y a zNative.loc() con cada posición,
+// también con la pantalla apagada (los temporizadores de la web se congelan en segundo plano).
+const ticks = new Set();
+let geoHandler = null, permResolve = null;
+window.zNative = {
+  loc(p) { geoHandler && geoHandler({ coords: { latitude: p.lat, longitude: p.lon, accuracy: p.acc, altitude: p.alt }, timestamp: p.t }); },
+  tick() { ticks.forEach(f => { try { f(); } catch (e) { } }); },
+  perm(ok) { if (permResolve) permResolve(ok); permResolve = null; },
+  saved(ok) { toast(ok ? 'Archivo guardado ✓' : 'No se guardó el archivo'); }
+};
+const Geo = {
+  watch: null,
+  // devuelve true si el GPS arrancó
+  async start(onPos, onErr) {
+    if (IN_CLAUDE) { onErr('unavailable'); return false; }
+    if (NATIVE) {
+      if (!NATIVE.hasLocation()) {
+        const ok = await new Promise(r => { permResolve = r; NATIVE.requestLocation(); });
+        if (!ok) { onErr('denied'); return false; }
+      }
+      geoHandler = onPos; NATIVE.startTracking(); return true;
+    }
+    if (!('geolocation' in navigator)) { onErr('unavailable'); return false; }
+    this.watch = navigator.geolocation.watchPosition(onPos, e => onErr(e.code === 1 ? 'denied' : 'nosignal'), { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+    return true;
+  },
+  // sin GPS: en Android mantiene vivo el servicio para que el cronómetro y la voz sigan con la pantalla apagada
+  keepAlive() { if (NATIVE) NATIVE.startTracking(); },
+  stop() {
+    geoHandler = null;
+    if (NATIVE) NATIVE.stopTracking();
+    if (this.watch != null) { navigator.geolocation.clearWatch(this.watch); this.watch = null; }
+  }
+};
+const GEO_ERR = { denied: 'Permiso de ubicación denegado', nosignal: 'Sin señal GPS', unavailable: 'El GPS no está disponible en esta vista. Usa la app Android o la web publicada.' };
+async function batteryCheck() {
+  if (!NATIVE || S.batteryAsked || NATIVE.isIgnoringBattery()) return;
+  S.batteryAsked = true; save();
+  if (await ask('Para que el GPS, la voz y el cronómetro sigan funcionando con la pantalla apagada, permite que Zancada use la batería sin restricciones.', 'Permitir')) NATIVE.batteryExempt();
 }
-$$('#run-seg button').forEach(b => b.onclick = () => setRunSeg(b.dataset.s));
-function renderCorrer() { renderGps(); if ($('#run-int').style.display !== 'none') renderInt(); }
-const gElapsed = () => G.elapsed + (G.state === 'running' ? (Date.now() - G.startAt) / 1000 : 0);
+let lastNotify = 0;
+function nativeNotify(text) { if (!NATIVE || Date.now() - lastNotify < 4000) return; lastNotify = Date.now(); NATIVE.notify(text); }
+
+function vib(p) { try { if (NATIVE) NATIVE.vibrate([].concat(p).filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0)); else navigator.vibrate && navigator.vibrate(p); } catch (e) { } }
+function speak(txt) { try { if (NATIVE) return NATIVE.speak(txt); if (!('speechSynthesis' in window)) return; const u = new SpeechSynthesisUtterance(txt); u.lang = 'es-ES'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } }
+function paceSpeech(sec) { sec = Math.round(sec); return `${Math.floor(sec / 60)} minutos ${sec % 60} segundos`; }
+let wakeLockRef = null;
+// en Android no hace falta: el servicio sigue con la pantalla apagada
+async function wakeOn() { try { if (!NATIVE && 'wakeLock' in navigator) wakeLockRef = await navigator.wakeLock.request('screen'); } catch (e) { } }
+function wakeOff() { try { wakeLockRef && wakeLockRef.release(); } catch (e) { } wakeLockRef = null; }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (G.state === 'running' || I.state === 'running')) wakeOn(); });
+
 function haversine(a, b) {
   const R = 6371000, toR = x => x * Math.PI / 180;
   const dLat = toR(b.lat - a.lat), dLon = toR(b.lon - a.lon);
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
+/* ---- Grabador de recorrido (compartido por GPS libre y series) ----
+   track: [lat, lon, segundos, metros, altitud|null, 1 si empieza tramo tras pausa] cada ≥10 m */
+function newRec() { return { track: [], dist: 0, last: null, buf: [], acc: null, gap: false }; }
+function recAdd(R, pos, elapsed) {
+  const { latitude: lat, longitude: lon, accuracy, altitude } = pos.coords;
+  R.acc = accuracy;
+  if (accuracy > 30) return false; // punto impreciso
+  const p = { lat, lon, t: pos.timestamp };
+  if (R.last && !R.gap) {
+    const d = haversine(R.last, p), dt = (p.t - R.last.t) / 1000;
+    if (d < 3) return false; // ruido
+    if (dt > 0 && d / dt > 12) return false; // salto imposible (> 43 km/h)
+    R.dist += d;
+  }
+  const seg = R.last && R.gap ? 1 : 0;
+  R.gap = false; R.last = p;
+  R.buf.push({ t: elapsed, d: R.dist });
+  while (R.buf.length > 2 && R.buf[R.buf.length - 1].t - R.buf[0].t > 30) R.buf.shift();
+  const lt = R.track[R.track.length - 1];
+  if (!lt || seg || R.dist - lt[3] >= 10) R.track.push([+lat.toFixed(6), +lon.toFixed(6), Math.round(elapsed), Math.round(R.dist), altitude != null ? Math.round(altitude * 10) / 10 : null, seg]);
+  try { S.lastPos = [lat, lon]; } catch (e) { }
+  return true;
+}
+function recPause(R) { R.gap = true; R.buf = []; }
+function recPace(R) { if (R.buf.length < 2) return null; const a = R.buf[0], b = R.buf[R.buf.length - 1]; const p = b.d - a.d > 15 ? (b.t - a.t) / ((b.d - a.d) / 1000) : null; return p > 90 ? p : null; }
+
+/* ---- Mapas (OpenStreetMap con Leaflet) ---- */
+const TILE_LAYERS = {
+  Mapa: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'],
+  'Satélite': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Imágenes © Esri']
+};
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function makeMap(el) {
+  const map = L.map(el, { zoomControl: true, attributionControl: true });
+  const layers = {};
+  for (const [n, [url, attr]] of Object.entries(TILE_LAYERS)) layers[n] = L.tileLayer(url, { attribution: attr, maxZoom: 19 });
+  const cur = layers[S.mapLayer] ? S.mapLayer : 'Mapa';
+  layers[cur].addTo(map); el.classList.toggle('osm', cur === 'Mapa');
+  L.control.layers(layers, null, { position: 'topright' }).addTo(map);
+  map.on('baselayerchange', e => { S.mapLayer = e.name; save(); el.classList.toggle('osm', e.name === 'Mapa'); });
+  return map;
+}
+const kmIcon = n => L.divIcon({ className: 'km-pin', html: `<span>${n}</span>`, iconSize: [22, 22] });
+const flagIcon = (txt, cls) => L.divIcon({ className: 'flag-pin ' + cls, html: `<span>${txt}</span>`, iconSize: [26, 26] });
+
+/* ---- Carrera libre con GPS ---- */
+const G = { state: 'idle', rec: newRec(), elapsed: 0, startAt: 0, timer: null, splits: [], lastSplitT: 0, nextKm: 1 };
+function setRunSeg(s) {
+  $$('#run-seg button').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+  $('#run-gps').style.display = s === 'gps' ? '' : 'none';
+  $('#run-int').style.display = s === 'int' ? '' : 'none';
+  if (s === 'int') renderInt(); else ensureLiveMap();
+}
+$$('#run-seg button').forEach(b => b.onclick = () => setRunSeg(b.dataset.s));
+function renderCorrer() { renderGps(); if ($('#run-int').style.display !== 'none') renderInt(); else ensureLiveMap(); }
+const gElapsed = () => G.elapsed + (G.state === 'running' ? (Date.now() - G.startAt) / 1000 : 0);
+function ensureLiveMap() {
+  if (!HAS_MAP) { $('#g-map').style.display = 'none'; $('#g-track').style.display = ''; drawTrack(); return; }
+  if (!G.map) {
+    G.map = makeMap($('#g-map'));
+    if (S.lastPos) G.map.setView(S.lastPos, 15); else G.map.setView([20, 0], 2);
+    G.map.on('dragstart', () => { G.follow = false; $('#g-center').hidden = false; });
+    G.follow = true;
+  }
+  setTimeout(() => G.map.invalidateSize(), 50);
+}
 function renderGps() {
-  const e = gElapsed();
+  const e = gElapsed(), R = G.rec;
   $('#g-time').textContent = fmtTime(e);
-  $('#g-dist').textContent = (G.dist / 1000).toFixed(2);
-  $('#g-avg').textContent = G.dist > 50 ? fmtPace(e / (G.dist / 1000)) : '--:--';
-  // ritmo actual: ventana de ~30 s
-  let cur = '--:--';
-  if (G.buf.length > 1) { const a = G.buf[0], b = G.buf[G.buf.length - 1]; if (b.d - a.d > 15) cur = fmtPace((b.t - a.t) / ((b.d - a.d) / 1000)); }
-  $('#g-pace').textContent = G.state === 'running' ? cur : '--:--';
-  const tgt = gOpts().target, cps = parsePace(cur);
-  $('#g-pace').style.color = tgt && cps > 0 && G.state === 'running' ? (cps > tgt * 1.03 ? 'var(--warn)' : cps < tgt * 0.97 ? 'var(--z1)' : 'var(--good)') : '';
+  $('#g-dist').textContent = (R.dist / 1000).toFixed(2);
+  $('#g-avg').textContent = R.dist > 50 ? fmtPace(e / (R.dist / 1000)) : '--:--';
+  const cp = G.state === 'running' ? recPace(R) : null;
+  $('#g-pace').textContent = cp ? fmtPace(cp) : '--:--';
+  const tgt = gOpts().target;
+  $('#g-pace').style.color = tgt && cp ? (cp > tgt * 1.03 ? 'var(--warn)' : cp < tgt * 0.97 ? 'var(--z1)' : 'var(--good)') : '';
   if (G.state === 'running' && e >= G.nextAnnT) { G.nextAnnT += +gOpts().every.slice(1); speak(gAnnounce(e)); }
-  $('#g-gps').textContent = G.acc ? `±${Math.round(G.acc)} m` : '—';
+  if (G.state === 'running') nativeNotify(`${(R.dist / 1000).toFixed(2)} km · ${fmtTime(e)} · ${R.dist > 50 ? fmtPace(e / (R.dist / 1000)) : '--:--'} /km`);
+  $('#g-gps').textContent = R.acc ? `±${Math.round(R.acc)} m` : '—';
   const c = $('#g-ctrls');
   const html = G.state === 'idle' ? `<button class="btn pri" style="padding:14px 34px;font-size:17px" id="g-start">▶ Empezar</button>`
     : G.state === 'running' ? `<button class="btn" style="padding:14px 26px" id="g-pause">⏸ Pausa</button><button class="btn danger" style="padding:14px 22px" id="g-stop">⏹ Terminar</button>`
@@ -1112,7 +1245,7 @@ function renderGps() {
 }
 function gOpts() { const o = S.gpsOpts || {}; return { every: o.every || '1000', target: parsePace(o.target) || null, goal: num(o.goal) || 0, raw: o }; }
 function gAnnounce(e) {
-  const km = G.dist / 1000, avg = km > 0.05 ? e / km : null, o = gOpts();
+  const km = G.rec.dist / 1000, avg = km > 0.05 ? e / km : null, o = gOpts();
   let t = `${km.toFixed(2).replace('.', ',')} kilómetros. Tiempo ${spokenTime(e)}.`;
   if (avg) t += ` Ritmo medio ${paceSpeech(avg)}.`;
   if (avg && o.target) { const d = Math.round(avg - o.target); t += Math.abs(d) <= 3 ? ' En ritmo objetivo.' : d > 0 ? ` ${d} segundos más lento que el objetivo.` : ` ${-d} segundos más rápido que el objetivo.`; }
@@ -1123,81 +1256,83 @@ function bindGpsOpts() {
   const o = gOpts().raw;
   $('#g-every').value = o.every || '1000'; $('#g-target').value = o.target || ''; $('#g-goal').value = o.goal || '';
   ['#g-every', '#g-target', '#g-goal'].forEach(sel => $(sel).onchange = () => { S.gpsOpts = { every: $('#g-every').value, target: $('#g-target').value.trim(), goal: $('#g-goal').value.trim() }; save(); });
+  $('#g-center').onclick = () => { G.follow = true; $('#g-center').hidden = true; if (G.rec.last && G.map) G.map.setView([G.rec.last.lat, G.rec.last.lon], Math.max(G.map.getZoom(), 16)); };
 }
+// recorrido simple en SVG cuando no hay mapa (p. ej. dentro de claude.ai)
 function drawTrack() {
-  const pts = G.pts; const svg = $('#g-track');
+  const pts = G.rec.track.map(p => ({ lat: p[0], lon: p[1] })); const svg = $('#g-track');
   if (pts.length < 2) { svg.innerHTML = '<text x="150" y="78" text-anchor="middle">Sin recorrido aún</text>'; return; }
+  svg.innerHTML = trackSvgPath(pts, 300, 150);
+}
+function trackSvgPath(pts, W, H) {
   const lats = pts.map(p => p.lat), lons = pts.map(p => p.lon);
   const mLat = Math.min(...lats), MLat = Math.max(...lats), mLon = Math.min(...lons), MLon = Math.max(...lons);
   const k = Math.cos(mLat * Math.PI / 180);
   const w = (MLon - mLon) * k || 1e-6, h = (MLat - mLat) || 1e-6;
-  const s = Math.min(280 / w, 130 / h);
-  const ox = (300 - w * s) / 2, oy = (150 - h * s) / 2;
-  const xy = p => [ox + (p.lon - mLon) * k * s, 150 - (oy + (p.lat - mLat) * s)];
+  const s = Math.min((W - 20) / w, (H - 20) / h);
+  const ox = (W - w * s) / 2, oy = (H - h * s) / 2;
+  const xy = p => [ox + (p.lon - mLon) * k * s, H - (oy + (p.lat - mLat) * s)];
   const d = pts.map((p, i) => (i ? 'L' : 'M') + xy(p).map(v => v.toFixed(1)).join(' ')).join('');
   const [sx, sy] = xy(pts[0]), [ex, ey] = xy(pts[pts.length - 1]);
-  svg.innerHTML = `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${sx}" cy="${sy}" r="5" fill="var(--good)"/><circle cx="${ex}" cy="${ey}" r="5" fill="var(--text)"/>`;
+  return `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${sx}" cy="${sy}" r="5" fill="var(--good)"/><circle cx="${ex}" cy="${ey}" r="5" fill="var(--text)"/>`;
 }
 function drawSplits() {
   $('#g-splits').innerHTML = G.splits.length ? `<table class="t"><tr><th>Km</th><th>Ritmo</th><th>Acumulado</th></tr>${G.splits.map((s, i) => `<tr><td>${i + 1}</td><td class="num"><b>${fmtPace(s)}</b></td><td class="num">${fmtTime(G.splits.slice(0, i + 1).reduce((a, b) => a + b, 0))}</td></tr>`).join('')}</table>` : '<div class="muted small">Aparecerán al completar cada kilómetro.</div>';
 }
-// En la app Android (WebView) se usan las funciones nativas de window.Android
-const NATIVE = window.Android || null;
-function vib(p) { try { if (NATIVE) NATIVE.vibrate([].concat(p).filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0)); else navigator.vibrate && navigator.vibrate(p); } catch (e) { } }
-function speak(txt) { try { if (NATIVE) return NATIVE.speak(txt); if (!('speechSynthesis' in window)) return; const u = new SpeechSynthesisUtterance(txt); u.lang = 'es-ES'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } }
-function paceSpeech(sec) { sec = Math.round(sec); return `${Math.floor(sec / 60)} minutos ${sec % 60} segundos`; }
-async function wakeOn() { try { if (NATIVE) return NATIVE.keepScreenOn(true); if ('wakeLock' in navigator) G.wake = await navigator.wakeLock.request('screen'); } catch (e) { } }
-function wakeOff() { try { if (NATIVE) NATIVE.keepScreenOn(false); G.wake && G.wake.release(); } catch (e) { } G.wake = null; }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (G.state === 'running' || I.state === 'running')) wakeOn(); });
-
 function onPos(pos) {
-  const { latitude: lat, longitude: lon, accuracy } = pos.coords;
-  G.acc = accuracy;
-  if (G.state !== 'running') return;
-  if (accuracy > 30) return; // descarta puntos imprecisos
-  const p = { lat, lon, t: pos.timestamp };
-  const last = G.pts[G.pts.length - 1];
-  if (last && !last.gap) {
-    const d = haversine(last, p), dt = (p.t - last.t) / 1000;
-    if (d < 3) return; // ruido
-    if (dt > 0 && d / dt > 12) return; // salto imposible (> 43 km/h)
-    G.dist += d;
+  if (G.state !== 'running') { G.rec.acc = pos.coords.accuracy; return; }
+  const e = gElapsed(), R = G.rec;
+  const before = R.track.length;
+  if (!recAdd(R, pos, e)) return;
+  if (HAS_MAP && G.map) {
+    const ll = [R.last.lat, R.last.lon];
+    const newSeg = R.track.length > before && R.track[R.track.length - 1][5];
+    if (!G.line || newSeg) G.line = L.polyline([], { color: cssVar('--accent'), weight: 5, opacity: .9 }).addTo(G.map);
+    G.line.addLatLng(ll);
+    if (!G.me) { G.me = L.circleMarker(ll, { radius: 8, color: '#fff', weight: 3, fillColor: cssVar('--accent'), fillOpacity: 1 }).addTo(G.map); G.startPin = L.marker(ll, { icon: flagIcon('▶', 'start') }).addTo(G.map); G.map.setView(ll, 16); }
+    G.me.setLatLng(ll);
+    if (G.follow) G.map.panTo(ll, { animate: document.visibilityState === 'visible' });
   }
-  G.pts.push(p);
-  const e = gElapsed();
-  G.buf.push({ t: e, d: G.dist });
-  while (G.buf.length > 2 && G.buf[G.buf.length - 1].t - G.buf[0].t > 30) G.buf.shift();
-  while (G.dist >= G.nextKm * 1000) {
+  while (R.dist >= G.nextKm * 1000) {
     const split = e - G.lastSplitT; G.splits.push(split); G.lastSplitT = e;
     vib([200, 100, 200]);
+    if (HAS_MAP && G.map) G.kmPins.push(L.marker([R.last.lat, R.last.lon], { icon: kmIcon(G.nextKm) }).addTo(G.map));
     G.nextKm++; drawSplits();
   }
   const o = gOpts();
-  if (/^\d+$/.test(o.every) && G.dist >= G.nextAnn) { G.nextAnn += +o.every; speak(gAnnounce(e)); }
-  if (o.goal > 0 && !G.goalDone && G.dist >= o.goal * 1000) { G.goalDone = true; vib([400, 150, 400]); speak(`¡Meta de ${String(o.goal).replace('.', ',')} kilómetros completada! Tiempo ${spokenTime(e)}.`); }
-  drawTrack();
+  if (/^\d+$/.test(o.every) && R.dist >= G.nextAnn) { G.nextAnn += +o.every; speak(gAnnounce(e)); }
+  if (o.goal > 0 && !G.goalDone && R.dist >= o.goal * 1000) { G.goalDone = true; vib([400, 150, 400]); speak(`¡Meta de ${String(o.goal).replace('.', ',')} kilómetros completada! Tiempo ${spokenTime(e)}.`); }
+  if (!HAS_MAP) drawTrack();
 }
-function gStart() {
-  if (window.claude && !NATIVE) return toast('El GPS no está disponible en esta vista. Usa la app Android o la web publicada.');
-  if (!('geolocation' in navigator)) return toast('Este dispositivo no tiene GPS disponible');
+function clearLiveMap() {
+  if (!G.map) return;
+  G.map.eachLayer(l => { if (!(l instanceof L.TileLayer)) G.map.removeLayer(l); });
+  G.line = G.me = G.startPin = null; G.kmPins = [];
+}
+async function gStart() {
   const o = gOpts();
-  Object.assign(G, { pts: [], dist: 0, elapsed: 0, splits: [], lastSplitT: 0, buf: [], nextKm: 1, nextAnn: /^\d+$/.test(o.every) ? +o.every : Infinity, nextAnnT: o.every[0] === 't' ? +o.every.slice(1) : Infinity, goalDone: false });
-  G.watch = navigator.geolocation.watchPosition(onPos, err => toast('GPS: ' + (err.code === 1 ? 'permiso denegado' : 'sin señal')), { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+  clearLiveMap();
+  Object.assign(G, { rec: newRec(), elapsed: 0, splits: [], lastSplitT: 0, nextKm: 1, kmPins: [], follow: true, t0: Date.now(), nextAnn: /^\d+$/.test(o.every) ? +o.every : Infinity, nextAnnT: o.every[0] === 't' ? +o.every.slice(1) : Infinity, goalDone: false });
+  const ok = await Geo.start(onPos, err => toast('GPS: ' + GEO_ERR[err]));
+  if (!ok) return;
   G.state = 'running'; G.startAt = Date.now();
-  G.timer = setInterval(renderGps, 500);
-  wakeOn(); speak('Comenzamos. ¡Buen entreno!'); drawSplits(); drawTrack(); renderGps();
+  G.timer = setInterval(renderGps, 500); ticks.add(renderGps);
+  wakeOn(); speak('Comenzamos. ¡Buen entreno!'); drawSplits(); renderGps();
+  batteryCheck();
 }
-function gPause() { G.elapsed = gElapsed(); G.state = 'paused'; G.buf = []; const l = G.pts[G.pts.length - 1]; if (l) l.gap = true; renderGps(); }
+function gPause() { G.elapsed = gElapsed(); G.state = 'paused'; recPause(G.rec); renderGps(); }
 function gResume() { G.state = 'running'; G.startAt = Date.now(); renderGps(); }
 async function gStop() {
   const e = gElapsed();
   if (!await ask('¿Terminar la actividad?', 'Terminar')) return;
-  navigator.geolocation.clearWatch(G.watch); clearInterval(G.timer); wakeOff();
-  G.elapsed = e; G.state = 'idle'; renderGps();
-  const km = G.dist / 1000;
+  Geo.stop(); clearInterval(G.timer); ticks.delete(renderGps); wakeOff();
+  G.elapsed = e; G.state = 'idle'; renderGps(); save();
+  const km = G.rec.dist / 1000;
   if (km < 0.05) { toast('Actividad demasiado corta para guardar'); return; }
-  speak(`Fin. ${km.toFixed(2)} kilómetros en ${fmtTime(e).replace(/:/g, ' ')}`);
-  openRunForm({ date: todayStr(), dist: +km.toFixed(2), dur: Math.round(e), splits: G.splits.slice(), ...(() => { const p = prefillFromPlan(todayStr()); delete p.dist; return p; })() });
+  speak(`Fin. ${km.toFixed(2).replace('.', ',')} kilómetros en ${spokenTime(e)}.`);
+  const p = prefillFromPlan(todayStr()); delete p.dist;
+  const o = gOpts();
+  showSummary({ date: todayStr(), type: 'suave', ...p, dist: +km.toFixed(2), dur: Math.round(e), splits: G.splits.slice(), track: G.rec.track.slice(), t0: G.t0, tgt: o.target, goal: o.goal || null }, true);
 }
 
 /* =================== CORRER: INTERVALOS =================== */
@@ -1276,6 +1411,7 @@ const I = { state: 'idle', sel: 'p-800', editing: false };
 let actx = null;
 function beep(f = 880, d = 0.15, n = 1) {
   if (!iopts().beep) return;
+  if (NATIVE) { try { NATIVE.tone(n >= 3 ? 3 : n === 2 ? 1 : d <= 0.1 ? 0 : 2); } catch (e) { } return; }
   try {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)();
     for (let i = 0; i < n; i++) {
@@ -1416,36 +1552,24 @@ function bindEditor(w) {
 const iElapsed = () => I.acc + (I.state === 'running' ? (Date.now() - I.startAt) / 1000 : 0);
 function intStart(w) {
   const o = iopts();
-  Object.assign(I, { w, steps: buildSteps(w), idx: -1, acc: 0, startAt: Date.now(), dist: 0, pts: null, buf: [], results: [], gpsOk: false, gpsErr: false, name: w.name });
+  Object.assign(I, { w, steps: buildSteps(w), idx: -1, acc: 0, startAt: Date.now(), t0: Date.now(), rec: newRec(), dist: 0, results: [], gpsOk: false, gpsErr: false, name: w.name });
   if (!I.steps.length) return toast('La sesión no tiene pasos');
   beep(660, 0.1); // desbloquea el audio en móviles
-  const needGps = o.gps && !(window.claude && !NATIVE) && 'geolocation' in navigator;
-  if (needGps) I.watch = navigator.geolocation.watchPosition(intPos, () => { I.gpsErr = true; }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
-  else I.gpsErr = true;
+  if (o.gps) Geo.start(intPos, () => { I.gpsErr = true; }).then(ok => { if (!ok) { I.gpsErr = true; Geo.keepAlive(); } });
+  else { I.gpsErr = true; Geo.keepAlive(); }
   I.state = 'running'; wakeOn();
   if (o.countdown) { I.pre = 3; I.lastBeep = null; } else { I.pre = 0; nextStep(); }
-  I.timer = setInterval(intTick, 200);
+  I.timer = setInterval(intTick, 200); ticks.add(intTick);
   renderIntLive();
+  batteryCheck();
 }
 function intPos(pos) {
-  const { latitude: lat, longitude: lon, accuracy } = pos.coords;
-  I.acc_gps = accuracy;
-  if (accuracy > 30) return;
-  I.gpsOk = true;
-  const p = { lat, lon, t: pos.timestamp };
-  if (I.state !== 'running') { I.last = null; return; }
-  if (I.last) {
-    const d = haversine(I.last, p), dt = (p.t - I.last.t) / 1000;
-    if (d < 2) return;
-    if (dt > 0 && d / dt > 12) return;
-    I.dist += d;
-    I.buf.push({ t: iElapsed(), d: I.dist });
-    while (I.buf.length > 2 && I.buf[I.buf.length - 1].t - I.buf[0].t > 20) I.buf.shift();
-  }
-  I.last = p;
+  if (I.state !== 'running' || I.pre > 0) { I.rec.acc = pos.coords.accuracy; return; }
+  if (!recAdd(I.rec, pos, iElapsed())) return;
+  I.gpsOk = true; I.dist = I.rec.dist;
   intCheck();
 }
-function curPace() { if (I.buf.length < 2) return null; const a = I.buf[0], b = I.buf[I.buf.length - 1]; const p = b.d - a.d > 10 ? (b.t - a.t) / ((b.d - a.d) / 1000) : null; return p > 90 ? p : null; }
+const curPace = () => recPace(I.rec);
 const useGpsDist = () => I.gpsOk && !I.gpsErrFatal;
 function nextStep() {
   if (I.idx >= 0) {
@@ -1486,7 +1610,7 @@ function intTick() {
   if (I.pre > 0) {
     const left = 3 - Math.floor((Date.now() - I.startAt) / 1000);
     if (left !== I.lastBeep && left > 0) { I.lastBeep = left; beep(520, 0.1); ispeak(String(left)); }
-    if (left <= 0) { I.pre = 0; I.acc = 0; I.startAt = Date.now(); I.dist = 0; I.buf = []; nextStep(); return; }
+    if (left <= 0) { I.pre = 0; I.acc = 0; I.startAt = Date.now(); I.rec = newRec(); I.dist = 0; nextStep(); return; }
     return renderIntLive();
   }
   const s = I.steps[I.idx];
@@ -1520,6 +1644,7 @@ function renderIntLive() {
   }
   const sub = s.seg.m === 'd' ? `${fmtDist(s.seg.v)} · ${fmtTime(inStep)} en el tramo` : `${fmtTime(s.seg.v)}${useGpsDist() ? ` · ${fmtDist(I.dist - I.stepD0)} recorridos` : ''}`;
   const totT = I.steps.reduce((a, st) => a + segEst(st.seg)[0], 0);
+  if (I.state === 'running') nativeNotify(`${s.n} · ${big} · total ${fmtTime(el)}`);
   box.innerHTML = `<div class="int-screen" style="background:color-mix(in srgb,${s.c} 26%,var(--surface));border:2px solid ${s.c}">
       <div class="phase">${esc(s.n)}</div>
       <div class="count">${big}</div>
@@ -1531,13 +1656,12 @@ function renderIntLive() {
     <div class="card" style="margin-top:14px"><div class="row between small"><span>Total ${fmtTime(el)}${useGpsDist() ? ` · ${fmtDist(I.dist)}` : ''}</span><span class="muted">Paso ${I.idx + 1}/${I.steps.length}</span></div><div class="bar" style="margin-top:8px"><i style="width:${clamp(el / totT, 0, 1) * 100}%"></i></div>
       <div class="row" style="justify-content:center;margin-top:14px">
         <button class="btn" id="in-pause">${I.state === 'paused' ? '▶ Seguir' : '⏸ Pausa'}</button><button class="btn ${s.seg.m === 'd' && !useGpsDist() ? 'pri' : ''}" id="in-skip">${s.seg.m === 'd' && !useGpsDist() ? '✓ Hecho' : '⏭ Saltar'}</button><button class="btn danger" id="in-stop">⏹ Parar</button></div></div>`;
-  $('#in-pause').onclick = () => { if (I.state === 'running') { I.acc = iElapsed(); I.state = 'paused'; I.last = null; I.buf = []; } else { I.state = 'running'; I.startAt = Date.now(); } renderIntLive(); };
+  $('#in-pause').onclick = () => { if (I.state === 'running') { I.acc = iElapsed(); I.state = 'paused'; recPause(I.rec); } else { I.state = 'running'; I.startAt = Date.now(); } renderIntLive(); };
   $('#in-skip').onclick = () => { if (I.state === 'paused') { I.state = 'running'; I.startAt = Date.now(); } nextStep(); };
   $('#in-stop').onclick = async () => { if (await ask('¿Parar la sesión?', 'Parar')) intFinish(true); };
 }
 function intFinish(aborted) {
-  clearInterval(I.timer); wakeOff();
-  if (I.watch != null) { navigator.geolocation.clearWatch(I.watch); I.watch = null; }
+  clearInterval(I.timer); ticks.delete(intTick); wakeOff(); Geo.stop();
   if (aborted && I.idx >= 0 && I.idx < I.steps.length) {
     const s = I.steps[I.idx];
     I.results.push({ k: s.k, n: s.n + ' (parcial)', t: iElapsed() - I.stepT0, d: useGpsDist() ? I.dist - I.stepD0 : 0, target: segPace(s.seg), planned: s.seg });
@@ -1566,8 +1690,163 @@ function renderIntDone() {
     const km = +((gpsD || estD) / 1000).toFixed(2);
     const notes = `${I.name}. ` + work.map(r => fmtTime(r.t)).join(', ');
     I.state = 'idle'; renderInt();
-    openRunForm({ date: todayStr(), type: I.w.type || 'series', dist: km, dur: Math.round(I.total), notes, splits: null });
+    openRunForm({ date: todayStr(), type: I.w.type || 'series', dist: km, dur: Math.round(I.total), notes, splits: null, track: I.rec.track.length > 1 ? I.rec.track.slice() : null, t0: I.t0 });
   };
+}
+
+/* =================== RESUMEN DE ENTRENAMIENTO =================== */
+// Ritmos objetivo según el tipo de entreno, para medir la efectividad (rango s/km)
+function targetRange(run) {
+  if (run.tgt) return [run.tgt * 0.97, run.tgt * 1.03];
+  const p = P(); if (!p) return null;
+  if (['suave', 'largo', 'recuperacion'].includes(run.type)) return [p.E[0] * 0.97, p.E[1] * 1.08];
+  if (run.type === 'tempo') return [p.T * 0.97, p.T * 1.03];
+  if (run.type === 'ritmo' && S.plan) { const rp = S.plan.target ? S.plan.target / S.plan.goal : predictTime(S.profile.vdot, S.plan.goal) / S.plan.goal; return [rp * 0.97, rp * 1.03]; }
+  return null;
+}
+function analyzeRun(run) {
+  const tr = run.track || [], A = {};
+  const splits = (run.splits || []).filter(x => x > 0 && isFinite(x));
+  A.avg = run.dur / run.dist;
+  // tiempo en movimiento: tramos a más de 0,6 m/s
+  let mov = 0;
+  for (let i = 1; i < tr.length; i++) { if (tr[i][5]) continue; const dt = tr[i][2] - tr[i - 1][2], dd = tr[i][3] - tr[i - 1][3]; if (dt > 0 && dd / dt > 0.6) mov += dt; }
+  A.moving = tr.length > 1 ? mov : null;
+  // desnivel: altitud suavizada con histéresis de 3 m (la altitud del GPS es ruidosa)
+  const alts = tr.map(p => p[4]).filter(a => a != null);
+  if (alts.length > 10) {
+    const sm = alts.map((_, i) => { const w = alts.slice(Math.max(0, i - 3), i + 4); return w.reduce((a, b) => a + b, 0) / w.length; });
+    let up = 0, down = 0, ref = sm[0];
+    for (const a of sm) { if (a - ref >= 3) { up += a - ref; ref = a; } else if (ref - a >= 3) { down += ref - a; ref = a; } }
+    A.up = Math.round(up); A.down = Math.round(down); A.altMin = Math.round(Math.min(...sm)); A.altMax = Math.round(Math.max(...sm));
+  }
+  const w = num(S.profile.weight);
+  A.kcal = Math.round((w || 70) * run.dist * 1.0); A.kcalEst = !w;
+  if (splits.length) {
+    A.best = Math.min(...splits); A.worst = Math.max(...splits);
+    A.bestKm = splits.indexOf(A.best) + 1; A.worstKm = splits.indexOf(A.worst) + 1;
+    const m = splits.reduce((a, b) => a + b, 0) / splits.length;
+    A.cv = splits.length >= 2 ? Math.sqrt(splits.reduce((a, b) => a + (b - m) ** 2, 0) / splits.length) / m : null;
+  }
+  // primera mitad frente a segunda mitad
+  if (tr.length > 4) {
+    const half = run.dist * 500; const i = tr.findIndex(p => p[3] >= half);
+    if (i > 0) { const t1 = tr[i][2]; A.half1 = t1; A.half2 = run.dur - t1; }
+  }
+  // efectividad: media de los criterios disponibles
+  const parts = [];
+  const pd = planDay(run.date);
+  const planKm = pd && pd.km > 0 && pd.type !== 'descanso' ? pd.km : null;
+  const goalKm = run.goal || planKm;
+  if (goalKm) parts.push({ n: run.goal ? 'Meta de distancia' : 'Distancia del plan', v: clamp(run.dist / goalKm * 100, 0, 100), txt: `${round1(run.dist)} de ${round1(goalKm)} km (${Math.round(run.dist / goalKm * 100)} %)` });
+  const rng = targetRange(run);
+  if (rng && splits.length) {
+    const ok = splits.filter(s => s >= rng[0] && s <= rng[1]).length;
+    parts.push({ n: run.tgt ? 'Ritmo objetivo' : 'Ritmo según el tipo de entreno', v: ok / splits.length * 100, txt: `${ok} de ${splits.length} km entre ${fmtPace(rng[0])} y ${fmtPace(rng[1])} /km` });
+  } else if (rng) {
+    const ok = A.avg >= rng[0] && A.avg <= rng[1];
+    parts.push({ n: 'Ritmo medio', v: ok ? 100 : Math.max(0, 100 - Math.abs(A.avg - (rng[0] + rng[1]) / 2) / A.avg * 400), txt: `${fmtPace(A.avg)} /km frente a ${fmtPace(rng[0])}–${fmtPace(rng[1])}` });
+  }
+  if (A.cv != null && !['series', 'fartlek', 'cuestas'].includes(run.type)) parts.push({ n: 'Regularidad', v: clamp(100 - (A.cv * 100 - 2) * 12, 0, 100), txt: `Variación entre kilómetros del ${(A.cv * 100).toFixed(1)} %` });
+  A.parts = parts;
+  A.score = parts.length ? Math.round(parts.reduce((a, p) => a + p.v, 0) / parts.length) : null;
+  A.plan = pd;
+  return A;
+}
+function scoreLabel(v) { return v >= 85 ? ['Excelente', 'var(--good)'] : v >= 70 ? ['Buena', 'var(--z2)'] : v >= 50 ? ['Mejorable', 'var(--warn)'] : ['Baja', 'var(--bad)']; }
+// color de cada tramo según el ritmo relativo a la media: verde rápido, amarillo medio, rojo lento
+function paceColor(ratio) {
+  const stops = [[0.9, cssVar('--z2')], [1.0, cssVar('--z3')], [1.12, cssVar('--z5')]];
+  if (ratio <= stops[0][0]) return stops[0][1];
+  if (ratio >= stops[2][0]) return stops[2][1];
+  return ratio < 1 ? stops[ratio < 0.95 ? 0 : 1][1] : stops[ratio < 1.06 ? 1 : 2][1];
+}
+let sumMap = null;
+function showSummary(run, unsaved) {
+  current = 'resumen';
+  $$('nav.bottom button').forEach(b => b.classList.toggle('active', b.dataset.v === (unsaved ? 'correr' : 'diario')));
+  $$('.view').forEach(s => s.classList.toggle('active', s.id === 'v-resumen'));
+  window.scrollTo({ top: 0 });
+  const A = analyzeRun(run), T = TYPES[run.type] || TYPES.suave;
+  const tr = run.track || [];
+  const splits = (run.splits || []).filter(x => x > 0 && isFinite(x));
+  const hasMap = HAS_MAP && tr.length > 1;
+  const ring = A.score != null ? (() => { const [lbl, c] = scoreLabel(A.score); const C = 2 * Math.PI * 34; return `<div class="ring"><svg viewBox="0 0 80 80" width="92" height="92"><circle cx="40" cy="40" r="34" fill="none" stroke="var(--surface2)" stroke-width="8"/><circle cx="40" cy="40" r="34" fill="none" stroke="${c}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C * A.score / 100} ${C}" transform="rotate(-90 40 40)"/><text x="40" y="45" text-anchor="middle" style="font-size:20px;font-weight:700;fill:var(--text)">${A.score}</text></svg><div><div class="k small muted">EFECTIVIDAD</div><div style="font-size:20px;font-weight:700;color:${c}">${lbl}</div></div></div>`; })() : '';
+  const half = A.half1 != null ? (() => { const d = A.half2 - A.half1; return `<div class="small" style="margin-top:10px">${d < -5 ? '✅ <b>Negative split</b>: segunda mitad ' + fmtTime(-d) + ' más rápida.' : d > 5 ? '⚠️ Segunda mitad ' + fmtTime(d) + ' más lenta que la primera.' : '➖ Mitades parejas.'} <span class="muted">(${fmtTime(A.half1)} / ${fmtTime(A.half2)})</span></div>`; })() : '';
+  // gráfico de parciales: barra más alta = km más rápido
+  let chart = '';
+  if (splits.length) {
+    const W = 320, H = 130, n = splits.length, bw = W / n, sp = splits.map(s => 1000 / s);
+    const mx = Math.max(...sp), mn = Math.min(...sp) * 0.85;
+    chart = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Ritmo por kilómetro">${splits.map((s, i) => { const h = (sp[i] - mn) / (mx - mn || 1) * (H - 38) + 8; return `<rect x="${i * bw + 2}" y="${H - 18 - h}" width="${Math.max(bw - 4, 2)}" height="${h}" rx="3" fill="${paceColor(s / A.avg)}"></rect>${n <= 12 ? `<text x="${i * bw + bw / 2}" y="${H - 22 - h}" text-anchor="middle">${fmtPace(s)}</text>` : ''}${n <= 25 || (i + 1) % 5 === 0 ? `<text x="${i * bw + bw / 2}" y="${H - 5}" text-anchor="middle">${i + 1}</text>` : ''}`; }).join('')}</svg>`;
+  }
+  const stat = (k, v) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  $('#v-resumen').innerHTML = `
+    <div class="row between" style="margin-bottom:10px"><div><div class="small muted">${fmtDate(run.date)}</div><h2 style="margin:0">${T.ic} ${T.label}</h2></div>${unsaved ? '<span class="chip" style="color:var(--warn)">Sin guardar</span>' : ''}</div>
+    ${hasMap ? `<div class="card" style="padding:0;overflow:hidden"><div id="s-map" class="map" style="height:320px;border-radius:0"></div><div class="row small muted" style="padding:10px 14px;gap:12px"><span><i class="lg" style="background:var(--z2)"></i>Más rápido</span><span><i class="lg" style="background:var(--z3)"></i>Ritmo medio</span><span><i class="lg" style="background:var(--z5)"></i>Más lento</span></div></div>`
+      : tr.length > 1 ? `<div class="card"><svg class="track" viewBox="0 0 300 180">${trackSvgPath(tr.map(p => ({ lat: p[0], lon: p[1] })), 300, 180)}</svg></div>` : ''}
+    <div class="grid3" style="margin-bottom:14px">
+      ${stat('Distancia', `${round1(run.dist)} <small>km</small>`)}${stat('Tiempo', fmtTime(run.dur))}${stat('Ritmo medio', `${fmtPace(A.avg)} <small>/km</small>`)}
+      ${stat('En movimiento', A.moving ? fmtTime(A.moving) : '—')}${stat('Desnivel +', A.up != null ? `${A.up} <small>m</small>` : '—')}${stat('Calorías', `${A.kcal}${A.kcalEst ? '<small>*</small>' : ''}`)}
+      ${A.best ? stat('Mejor km', `${fmtPace(A.best)} <small>(km ${A.bestKm})</small>`) : ''}${A.worst ? stat('Km más lento', `${fmtPace(A.worst)} <small>(km ${A.worstKm})</small>`) : ''}${stat('Velocidad', `${(run.dist / (run.dur / 3600)).toFixed(1)} <small>km/h</small>`)}
+    </div>
+    ${A.kcalEst ? '<p class="small muted" style="margin-top:-6px">* Calorías estimadas con 70 kg. Pon tu peso en el perfil para afinarlas.</p>' : ''}
+    <div class="card"><h3>Efectividad</h3>
+      ${A.score != null ? ring + A.parts.map(p => `<div style="margin-top:10px"><div class="row between small"><span><b>${p.n}</b></span><span>${Math.round(p.v)} %</span></div><div class="bar" style="margin:5px 0 3px"><i style="width:${p.v}%;background:${scoreLabel(p.v)[1]}"></i></div><div class="small muted">${esc(p.txt)}</div></div>`).join('')
+      : '<p class="small muted" style="margin:0">Para medir la efectividad, crea un plan, pon un ritmo objetivo o una meta antes de correr, o guarda tu VDOT en Calcular.</p>'}
+      ${half}
+      ${A.plan && A.plan.type !== 'descanso' ? `<div class="small muted" style="margin-top:10px">Plan de hoy: <b>${esc(A.plan.title)}</b>${A.plan.km ? ` · ${A.plan.km} km` : ''}</div>` : ''}
+    </div>
+    ${splits.length ? `<div class="card"><h3>Ritmo por kilómetro</h3>${chart}<div style="overflow-x:auto;margin-top:8px"><table class="t"><tr><th>Km</th><th>Ritmo</th><th>Dif. media</th><th>Acumulado</th></tr>${splits.map((s, i) => { const d = Math.round(s - A.avg); return `<tr><td>${i + 1}</td><td class="num"><b>${fmtPace(s)}</b></td><td class="num" style="color:${d < -2 ? 'var(--good)' : d > 2 ? 'var(--warn)' : 'var(--muted)'}">${d > 0 ? '+' : d < 0 ? '−' : ''}${Math.abs(d)} s</td><td class="num">${fmtTime(splits.slice(0, i + 1).reduce((a, b) => a + b, 0))}</td></tr>`; }).join('')}</table></div></div>` : ''}
+    ${A.up != null ? `<div class="card small"><b>Altitud</b>: mín. ${A.altMin} m · máx. ${A.altMax} m · +${A.up} m / −${A.down} m <span class="muted">(aproximada, según el GPS)</span></div>` : ''}
+    <div class="row" style="margin-top:4px">
+      ${unsaved ? `<button class="btn pri" id="sm-save">💾 Guardar en el diario</button><button class="btn danger" id="sm-discard">Descartar</button>` : `<button class="btn" id="sm-back">← Volver</button><button class="btn" id="sm-edit">✏️ Editar datos</button>`}
+      ${tr.length > 1 ? `<button class="btn" id="sm-gpx">⬇️ GPX</button>` : ''}
+    </div>`;
+  if (hasMap) {
+    if (sumMap) { sumMap.remove(); sumMap = null; }
+    sumMap = makeMap($('#s-map'));
+    const lls = tr.map(p => [p[0], p[1]]);
+    // tramos coloreados por ritmo (ventana de ~4 puntos)
+    for (let i = 1; i < tr.length; i++) {
+      if (tr[i][5]) continue;
+      const j = Math.max(0, i - 4), dt = tr[i][2] - tr[j][2], dd = tr[i][3] - tr[j][3];
+      const pace = dd > 0 ? dt / (dd / 1000) : A.avg;
+      L.polyline([lls[i - 1], lls[i]], { color: paceColor(pace / A.avg), weight: 6, opacity: .95, lineCap: 'round' }).addTo(sumMap);
+    }
+    L.marker(lls[0], { icon: flagIcon('▶', 'start') }).addTo(sumMap);
+    L.marker(lls[lls.length - 1], { icon: flagIcon('■', 'end') }).addTo(sumMap);
+    for (let k = 1; k * 1000 <= run.dist * 1000; k++) { const p = tr.find(q => q[3] >= k * 1000); if (p) L.marker([p[0], p[1]], { icon: kmIcon(k) }).addTo(sumMap); }
+    sumMap.fitBounds(L.latLngBounds(lls), { padding: [24, 24] });
+    setTimeout(() => sumMap.invalidateSize(), 60);
+  }
+  if (unsaved) {
+    $('#sm-save').onclick = () => openRunForm(run);
+    $('#sm-discard').onclick = async () => { if (await ask('¿Descartar este entrenamiento? Se perderá el recorrido.', 'Descartar')) go('correr'); };
+  } else {
+    $('#sm-back').onclick = () => go('diario');
+    $('#sm-edit').onclick = () => openRunForm(S.runs.find(x => x.id === run.id) || run);
+  }
+  $('#sm-gpx') && ($('#sm-gpx').onclick = () => saveText(`zancada-${run.date}.gpx`, 'application/gpx+xml', toGpx(run)));
+}
+function toGpx(run) {
+  const t0 = run.t0 || parseYmd(run.date).getTime();
+  const tr = run.track || [];
+  let segs = [], cur = [];
+  tr.forEach(p => { if (p[5] && cur.length) { segs.push(cur); cur = []; } cur.push(p); });
+  if (cur.length) segs.push(cur);
+  const pt = p => `<trkpt lat="${p[0]}" lon="${p[1]}">${p[4] != null ? `<ele>${p[4]}</ele>` : ''}<time>${new Date(t0 + p[2] * 1000).toISOString()}</time></trkpt>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Zancada" xmlns="http://www.topografix.com/GPX/1/1">\n<metadata><name>${esc((TYPES[run.type] || TYPES.suave).label)} ${run.date}</name><time>${new Date(t0).toISOString()}</time></metadata>\n<trk><name>${esc((TYPES[run.type] || TYPES.suave).label)} ${run.date}</name><type>running</type>\n${segs.map(sg => `<trkseg>\n${sg.map(pt).join('\n')}\n</trkseg>`).join('\n')}\n</trk>\n</gpx>\n`;
+}
+// guarda un archivo de texto: diálogo nativo en Android, descarga en el navegador
+function saveText(filename, mime, text) {
+  if (NATIVE && NATIVE.saveFile) return NATIVE.saveFile(filename, mime, text);
+  if (window.claude && window.claude.use) {
+    window.claude.use('downloads').then(dl => dl ? dl.save({ filename, data: text }) : toast('La descarga no está disponible aquí')).catch(() => toast('No se pudo descargar'));
+    return;
+  }
+  const blob = new Blob([text], { type: mime });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 /* =================== PERFIL =================== */
@@ -1593,13 +1872,7 @@ $('#btn-profile').onclick = () => {
       save(); closeDlg(); toast('Perfil guardado'); render();
     };
     $('#pr-exp', b).onclick = () => {
-      if (NATIVE) return NATIVE.shareText(`zancada-${todayStr()}.json`, JSON.stringify(S));
-      if (window.claude && window.claude.use) {
-        window.claude.use('downloads').then(dl => dl ? dl.save({ filename: `zancada-${todayStr()}.json`, data: JSON.stringify(S, null, 1) }) : toast('Exportar no está disponible aquí')).catch(() => toast('No se pudo exportar'));
-        return;
-      }
-      const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `zancada-${todayStr()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      saveText(`zancada-${todayStr()}.json`, 'application/json', JSON.stringify(S));
     };
     $('#pr-imp', b).onchange = e => {
       const f = e.target.files[0]; if (!f) return;

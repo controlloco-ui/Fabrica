@@ -1,5 +1,5 @@
-const CACHE = 'zancada-v3';
-const FILES = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'zancada-v4';
+const FILES = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png', './vendor/leaflet.js', './vendor/leaflet.css', './vendor/images/layers.png', './vendor/images/layers-2x.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
