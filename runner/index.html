@@ -1099,10 +1099,13 @@ function drawTrack() {
 function drawSplits() {
   $('#g-splits').innerHTML = G.splits.length ? `<table class="t"><tr><th>Km</th><th>Ritmo</th><th>Acumulado</th></tr>${G.splits.map((s, i) => `<tr><td>${i + 1}</td><td class="num"><b>${fmtPace(s)}</b></td><td class="num">${fmtTime(G.splits.slice(0, i + 1).reduce((a, b) => a + b, 0))}</td></tr>`).join('')}</table>` : '<div class="muted small">Aparecerán al completar cada kilómetro.</div>';
 }
-function speak(txt) { try { if (!('speechSynthesis' in window)) return; const u = new SpeechSynthesisUtterance(txt); u.lang = 'es-ES'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } }
+// En la app Android (WebView) se usan las funciones nativas de window.Android
+const NATIVE = window.Android || null;
+function vib(p) { try { if (NATIVE) NATIVE.vibrate([].concat(p).filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0)); else navigator.vibrate && navigator.vibrate(p); } catch (e) { } }
+function speak(txt) { try { if (NATIVE) return NATIVE.speak(txt); if (!('speechSynthesis' in window)) return; const u = new SpeechSynthesisUtterance(txt); u.lang = 'es-ES'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } }
 function paceSpeech(sec) { sec = Math.round(sec); return `${Math.floor(sec / 60)} minutos ${sec % 60} segundos`; }
-async function wakeOn() { try { if ('wakeLock' in navigator) G.wake = await navigator.wakeLock.request('screen'); } catch (e) { } }
-function wakeOff() { try { G.wake && G.wake.release(); } catch (e) { } G.wake = null; }
+async function wakeOn() { try { if (NATIVE) return NATIVE.keepScreenOn(true); if ('wakeLock' in navigator) G.wake = await navigator.wakeLock.request('screen'); } catch (e) { } }
+function wakeOff() { try { if (NATIVE) NATIVE.keepScreenOn(false); G.wake && G.wake.release(); } catch (e) { } G.wake = null; }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (G.state === 'running' || I.state === 'running')) wakeOn(); });
 
 function onPos(pos) {
@@ -1125,7 +1128,7 @@ function onPos(pos) {
   while (G.dist >= G.nextKm * 1000) {
     const split = e - G.lastSplitT; G.splits.push(split); G.lastSplitT = e;
     if ($('#g-voice').checked) speak(`Kilómetro ${G.nextKm}. Parcial ${paceSpeech(split)}. Ritmo medio ${paceSpeech(e / G.nextKm)}.`);
-    navigator.vibrate && navigator.vibrate([200, 100, 200]);
+    vib([200, 100, 200]);
     G.nextKm++; drawSplits();
   }
   drawTrack();
@@ -1223,7 +1226,7 @@ function startStep() {
   const s = I.steps[I.idx];
   I.left = s.d; I.endAt = Date.now() + s.d * 1000; I.lastBeep = null;
   beep(s.k === 'work' ? 1100 : 700, 0.25, s.k === 'work' ? 2 : 1);
-  navigator.vibrate && navigator.vibrate(s.k === 'work' ? [300, 100, 300] : 400);
+  vib(s.k === 'work' ? [300, 100, 300] : 400);
   speak(s.k === 'work' ? `${s.n.replace('/', ' de ')}. ¡Vamos!` : s.n);
   renderIntLive();
 }
@@ -1292,6 +1295,7 @@ $('#btn-profile').onclick = () => {
       save(); closeDlg(); toast('Perfil guardado'); render();
     };
     $('#pr-exp', b).onclick = () => {
+      if (NATIVE) return NATIVE.shareText(`zancada-${todayStr()}.json`, JSON.stringify(S));
       const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `zancada-${todayStr()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     };
@@ -1305,7 +1309,7 @@ $('#btn-profile').onclick = () => {
 
 /* =================== Inicio =================== */
 render();
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('service-worker.js').catch(() => { });
+if (!NATIVE && 'serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('service-worker.js').catch(() => { });
 </script>
 </body>
 </html>

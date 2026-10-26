@@ -1,0 +1,55 @@
+name: Android APK
+
+on:
+  push:
+    paths:
+      - 'runner/**'
+      - 'android/**'
+      - '.github/workflows/android-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Copiar la web a los assets
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp runner/index.html runner/manifest.json runner/icon-*.png android/app/src/main/assets/
+
+      - name: Compilar APK
+        working-directory: android
+        run: gradle assembleRelease --no-daemon
+
+      - run: cp android/app/build/outputs/apk/release/app-release.apk Zancada.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Zancada-apk
+          path: Zancada.apk
+
+      - name: Publicar en Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete zancada-latest --yes --cleanup-tag || true
+          gh release create zancada-latest Zancada.apk \
+            --target "${{ github.sha }}" \
+            --title "Zancada para Android" \
+            --notes "APK de Zancada (rama ${{ github.ref_name }}, commit ${{ github.sha }}). Descarga Zancada.apk en el móvil y ábrelo; permite instalar apps de origen desconocido si Android lo pide."

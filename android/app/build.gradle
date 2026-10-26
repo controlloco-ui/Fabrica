@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.zancada.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.zancada.app'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    // Clave fija para que cada nueva versión se instale encima de la anterior
+    signingConfigs {
+        zancada {
+            storeFile file('../zancada.keystore')
+            storePassword 'zancada'
+            keyAlias 'zancada'
+            keyPassword 'zancada'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.zancada
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}
