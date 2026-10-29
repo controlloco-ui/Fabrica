@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.fabrica.tycoon'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.fabrica.tycoon'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    // Clave fija para que cada nueva versión se instale encima de la anterior
+    signingConfigs {
+        tycoon {
+            storeFile file('../tycoon.keystore')
+            storePassword 'tycoon'
+            keyAlias 'tycoon'
+            keyPassword 'tycoon'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.tycoon
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

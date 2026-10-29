@@ -1,0 +1,53 @@
+name: Fábrica Tycoon APK
+
+on:
+  push:
+    paths:
+      - 'tycoon/**'
+      - 'tycoon-android/**'
+      - '.github/workflows/tycoon-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Copiar el juego a los assets
+        run: |
+          mkdir -p tycoon-android/app/src/main/assets
+          cp tycoon/index.html tycoon-android/app/src/main/assets/
+
+      - name: Compilar APK
+        working-directory: tycoon-android
+        run: gradle assembleRelease --no-daemon
+
+      - run: cp tycoon-android/app/build/outputs/apk/release/app-release.apk FabricaTycoon.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FabricaTycoon-apk
+          path: FabricaTycoon.apk
+
+      - name: Publicar en Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete tycoon-latest --yes --cleanup-tag || true
+          gh release create tycoon-latest FabricaTycoon.apk \
+            --target "${{ github.sha }}" \
+            --title "Fábrica Tycoon para Android" \
+            --notes "APK de Fábrica Tycoon (rama ${{ github.ref_name }}, commit ${{ github.sha }}). Descarga FabricaTycoon.apk en el móvil y ábrelo; permite instalar apps de origen desconocido si Android lo pide."
