@@ -18,10 +18,10 @@ PWA instalable y sin conexión (abre `runner/index.html`). Los datos se guardan 
 
 Juego estilo tycoon de Roblox para el móvil (abre `tycoon/index.html` o instala el APK de la release `tycoon-latest`, que compila `.github/workflows/tycoon-apk.yml`).
 
-- **Menú**: pantalla de título con continuar, nueva partida y cargar (3 ranuras), guardar, opciones y salir; menú de pausa con todo lo demás.
-- **Personaje** pseudo 3D (mujer u hombre) totalmente personalizable: 10 barras de físico (altura, corpulencia, hombros, pecho, cintura, caderas, brazos, muslos, largo de piernas, cabeza), piel, peinados, colores, y ropa, calzado y accesorios que se desbloquean por nivel y se compran con dinero.
-- **5 fábricas** (Bronce, Cristal, Volcánica, Neón, Galáctica), cada una con 3 cintas, 12 dispensadores, 9 mejoradores (×2, duplicador, ×3), generadores y estatua. Todas producen a la vez.
-- **Tienda de remodelación**: suelos, muros, cintas, hornos y 12 decoraciones (+2 % de producción cada una).
-- **Mejoras** por nivel y dinero: velocidad, trabajadores (personajes que cobran y recogen bolsas), automatización (hasta auto-compra), valor, cadencia, suerte, imán, ganancias offline, regateo y experiencia.
-- Niveles y XP, misiones, cofre gratis cada 10 min, ruleta, bolsas de dinero, hora dorada y lluvia de dinero, renacimientos con fichas.
-- **Controles**: joystick flotante o fijo con carrera al llevarlo al borde, botón de impulso, toque para ir andando, pellizco para zoom y arrastre con dos dedos para mover la cámara (o cámara libre). Música opcional.
+- **Vista 2.5D** con cámara inclinada (ángulo cenital, medio o bajo), sombras suaves, luz de ventanas, humo y máquinas en 3D. Fábrica grande con zona de producción, zona de máquinas y **zona de descanso** para decorar.
+- **Menú**: pantalla de título con continuar, nueva partida y cargar (3 ranuras), guardar, opciones y salir.
+- **Personaje** mujer u hombre con vista de frente, espalda y perfil, **física** (rebote del cuerpo, pelo y falda) y 11 barras de físico (incluye glúteos). Ropa por nivel y dinero: pantalones, pitillo, ancho, shorts, minishorts, microshorts, faldas (larga, midi, tubo, plisada, mini, micro), bikini, bañador, vestidos, tops y más.
+- **5 fábricas** con 3 cintas cada una: dispensadores, escáner láser ×2, duplicador y prensa hidráulica ×3, más 5 **máquinas independientes** con 10 niveles (mina, imprenta de billetes, servidores, planta solar y brazo robótico).
+- **Tienda**: 21 muebles que se colocan libremente (arrastrar, girar, cambiar color), 14 suelos (fábrica y zona de descanso por separado), 12 muros, cintas personalizables (dibujo, colores y brillo) y hornos.
+- **Mejoras** por nivel y dinero (velocidad, trabajadores, automatización hasta auto-compra, ingeniería, valor, suerte, imán…), misiones, cofre, ruleta, eventos y renacimientos.
+- **Controles**: joystick flotante o fijo con carrera, impulso, toque para ir andando, pellizco para zoom y arrastre con dos dedos para mover la cámara.
