@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/probar.js": {
+      "maxDuration": 120,
+      "includeFiles": "probador/**"
+    }
+  }
+}

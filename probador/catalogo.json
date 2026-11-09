@@ -1,0 +1,98 @@
+{
+  "tiendas": {
+    "fabrica": { "nombre": "La Fábrica", "whatsapp": "" },
+    "santos": { "nombre": "Santos", "whatsapp": "" }
+  },
+  "prendas": [
+    {
+      "id": "fabrica-remera-blanca",
+      "tienda": "fabrica",
+      "nombre": "Remera básica",
+      "categoria": "superior",
+      "color": "Blanco",
+      "descripcion": "Remera de algodón, cuello redondo, manga corta, calce recto",
+      "imagen": "prendas/remera-blanca.jpg",
+      "ejemplo": true
+    },
+    {
+      "id": "fabrica-buzo-gris",
+      "tienda": "fabrica",
+      "nombre": "Buzo canguro",
+      "categoria": "superior",
+      "color": "Gris melange",
+      "descripcion": "Buzo de frisa con capucha, bolsillo canguro, cordones blancos, puños y cintura acanalados",
+      "imagen": "prendas/buzo-gris.jpg",
+      "ejemplo": true
+    },
+    {
+      "id": "fabrica-jean-azul",
+      "tienda": "fabrica",
+      "nombre": "Jean recto",
+      "categoria": "inferior",
+      "color": "Azul gastado",
+      "descripcion": "Jean de tiro medio, pierna recta, largo hasta el tobillo, costuras color mostaza",
+      "imagen": "prendas/jean-azul.jpg",
+      "ejemplo": true
+    },
+    {
+      "id": "fabrica-campera-puffer",
+      "tienda": "fabrica",
+      "nombre": "Campera puffer",
+      "categoria": "abrigo",
+      "color": "Negro",
+      "descripcion": "Campera inflable acolchada a la cadera, cuello alto, cierre al frente, puños elastizados",
+      "imagen": "prendas/campera-puffer.jpg",
+      "ejemplo": true
+    },
+    {
+      "id": "fabrica-zapatillas-blancas",
+      "tienda": "fabrica",
+      "nombre": "Zapatillas urbanas",
+      "categoria": "calzado",
+      "color": "Blanco",
+      "descripcion": "Zapatillas bajas de cuero sintético blanco, suela blanca, detalle verde oscuro en el talón",
+      "imagen": "prendas/zapatillas-blancas.jpg",
+      "ejemplo": true
+    },
+    {
+      "id": "santos-camisa-celeste",
+      "tienda": "santos",
+      "nombre": "Camisa de lino",
+      "categoria": "superior",
+      "color": "Celeste",
+      "descripcion": "Camisa de lino manga larga, cuello clásico, botones blancos, bolsillo en el pecho, ruedo curvo",
+      "imagen": "prendas/camisa-celeste.jpg",
+      "ejemplo": true
+    },
+    {
+      "id": "santos-vestido-terracota",
+      "tienda": "santos",
+      "nombre": "Vestido midi",
+      "categoria": "entero",
+      "color": "Terracota",
+      "descripcion": "Vestido midi escote en V, manga corta, cintura marcada con lazo, falda evasé hasta media pierna",
+      "imagen": "prendas/vestido-terracota.jpg",
+      "ejemplo": true
+    },
+    {
+      "id": "santos-pollera-plisada",
+      "tienda": "santos",
+      "nombre": "Pollera plisada",
+      "categoria": "inferior",
+      "color": "Negro",
+      "descripcion": "Pollera midi plisada de tiro alto, pretina lisa, largo por debajo de la rodilla",
+      "imagen": "prendas/pollera-plisada.jpg",
+      "ejemplo": true
+    },
+    {
+      "id": "santos-blazer-beige",
+      "tienda": "santos",
+      "nombre": "Blazer sastrero",
+      "categoria": "abrigo",
+      "color": "Beige",
+      "descripcion": "Blazer de sastrería con solapa, dos botones, bolsillos con tapa, largo a la cadera",
+      "imagen": "prendas/blazer-beige.jpg",
+      "ejemplo": true
+    }
+  ]
+}

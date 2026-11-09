@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Probador virtual — La Fábrica · Santos</title>
+<meta name="description" content="Subí una foto tuya, elegí prendas de La Fábrica y Santos, y mirá cómo te quedan.">
+<meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141311" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23b4532a'/%3E%3Cpath d='M32 17a5 5 0 1 1 5 5c-2 0-5 1-5 4v2L12 42c-2 1-1 4 1 4h38c2 0 3-3 1-4L32 28' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f3ee; --surface:#fffdf9; --surface2:#eee9e1; --line:#e1dace; --text:#1d1b18; --muted:#6c655b;
+  --accent:#b4532a; --accent-ink:#fff; --accent-soft:#b4532a1a; --bad:#b3261e; --wsp:#1f7a4d;
+  --sombra:0 1px 2px #2b201508, 0 8px 24px #2b201512;
+  --radio:16px; --barra:76px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141311; --surface:#1d1b18; --surface2:#26231f; --line:#37322b; --text:#f1ece4; --muted:#a59d90;
+    --accent:#e07a4c; --accent-ink:#1b0f08; --accent-soft:#e07a4c22; --bad:#f08a80; --wsp:#3fbf7f;
+    --sombra:0 1px 2px #0006, 0 8px 24px #0005;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141311; --surface:#1d1b18; --surface2:#26231f; --line:#37322b; --text:#f1ece4; --muted:#a59d90;
+  --accent:#e07a4c; --accent-ink:#1b0f08; --accent-soft:#e07a4c22; --bad:#f08a80; --wsp:#3fbf7f;
+  --sombra:0 1px 2px #0006, 0 8px 24px #0005;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 'Inter',system-ui,sans-serif;overflow-x:hidden;
+  padding-bottom:calc(var(--barra) + env(safe-area-inset-bottom,0px) + 16px)}
+h1,h2,h3{font-weight:400;margin:0}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+img{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* ---------- Cabecera ---------- */
+header.top{max-width:1180px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 8px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px 24px;flex-wrap:wrap}
+.marca .tiendas{display:block;font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.marca h1{font-family:'Instrument Serif',Georgia,serif;font-size:clamp(38px,7vw,56px);line-height:1;letter-spacing:-.01em}
+.marca h1 em{font-style:italic}
+header.top .bajada{margin:0;color:var(--muted);max-width:34ch}
+
+/* ---------- Layout ---------- */
+.layout{max-width:1180px;margin:0 auto;padding:16px;display:grid;gap:28px}
+@media (min-width:900px){
+  .layout{grid-template-columns:minmax(330px,430px) 1fr;align-items:start;gap:36px}
+  .escenario{position:sticky;top:16px}
+}
+.paso{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.paso .n{font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:99px;width:24px;height:24px;display:inline-grid;place-items:center;flex:none}
+.paso h2{font-family:'Instrument Serif',Georgia,serif;font-size:28px;line-height:1.1}
+.paso .ayuda{margin-left:auto;font-size:12.5px;color:var(--muted)}
+
+/* ---------- Subir foto ---------- */
+.zona{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;
+  min-height:300px;padding:28px 20px;border:1.5px dashed var(--line);border-radius:var(--radio);background:var(--surface);cursor:pointer;
+  transition:border-color .2s, background .2s}
+.zona:hover,.zona.arrastrando{border-color:var(--accent);background:var(--accent-soft)}
+.zona svg{width:54px;height:54px;color:var(--accent);margin-bottom:6px}
+.zona strong{font-size:16px;font-weight:600}
+.zona span{color:var(--muted);font-size:13.5px}
+.zona .boton{margin-top:12px}
+.tips{list-style:none;margin:14px 2px 0;padding:0;display:grid;gap:7px;font-size:13.5px;color:var(--muted)}
+.tips li{display:flex;gap:8px;align-items:flex-start}
+.tips li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:7px}
+
+/* ---------- Visor / comparador ---------- */
+.lienzo{--ar:.75;--pos:0%;position:relative;width:min(100%, calc(68vh * var(--ar)));aspect-ratio:var(--ar);margin:0 auto;
+  border-radius:var(--radio);overflow:hidden;background:var(--surface2);box-shadow:var(--sombra);user-select:none;-webkit-user-select:none}
+.lienzo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lienzo.comparando #img-antes{z-index:2;clip-path:inset(0 calc(100% - var(--pos)) 0 0)}
+.divisor{position:absolute;top:0;bottom:0;left:var(--pos);width:2px;margin-left:-1px;background:#fff;z-index:3;pointer-events:none;box-shadow:0 0 0 1px #0002}
+.divisor::after{content:"";position:absolute;top:50%;left:50%;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;background:#fff;box-shadow:0 2px 10px #0004;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231d1b18' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6l-6 6 6 6M15 6l6 6-6 6'/%3E%3C/svg%3E");
+  background-size:20px;background-position:center;background-repeat:no-repeat}
+.lienzo:not(.comparando) .divisor,.lienzo.pos-cero .divisor{display:none}
+#comparar{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;z-index:4;cursor:ew-resize;touch-action:pan-y}
+.lienzo:not(.comparando) #comparar{display:none}
+.etiqueta{position:absolute;top:10px;z-index:5;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 9px;border-radius:99px;background:#000a;color:#fff;pointer-events:none;backdrop-filter:blur(6px)}
+.etiqueta.antes{left:10px}.etiqueta.despues{right:10px}
+.lienzo:not(.comparando) .etiqueta.despues{display:none}
+.lienzo.comparando .etiqueta.antes{opacity:calc(var(--mostrar-antes,0))}
+.pista{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;pointer-events:none;white-space:nowrap;
+  font-size:12px;font-weight:500;padding:6px 11px;border-radius:99px;background:#000a;color:#fff;backdrop-filter:blur(6px);transition:opacity .3s}
+
+.cargando{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;padding:20px;
+  background:linear-gradient(to top,#000c,#0003 55%,#0000);color:#fff;text-align:center}
+.cargando::before{content:"";position:absolute;left:0;right:0;height:38%;top:-38%;
+  background:linear-gradient(to bottom,#fff0,#ffffff38 85%,#fffc 100%);animation:escanear 2.4s cubic-bezier(.45,0,.55,1) infinite}
+@keyframes escanear{to{top:100%}}
+.cargando p{margin:0;font-weight:600;font-size:16px;position:relative}
+.cargando small{opacity:.8;position:relative}
+.cargando button{position:relative;margin-top:4px;background:#fff2;border:1px solid #fff6;color:#fff;border-radius:99px;padding:6px 14px;font-size:13px}
+@media (prefers-reduced-motion:reduce){.cargando::before{animation:none;display:none}}
+
+.acciones{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.boton{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:99px;padding:9px 15px;font-size:14px;font-weight:500;
+  border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none;transition:transform .12s, background .2s}
+.boton:active{transform:scale(.97)}
+.boton svg{width:17px;height:17px;flex:none}
+.boton.primario{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.boton.wsp{background:var(--wsp);border-color:var(--wsp);color:#fff}
+.consultas{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
+.consultas:empty{display:none}
+
+.historial{margin-top:18px}
+.historial h3{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.tira{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.tira button{flex:none;width:62px;aspect-ratio:3/4;padding:0;border-radius:10px;overflow:hidden;border:2px solid transparent;background:var(--surface2)}
+.tira button[aria-current="true"]{border-color:var(--accent)}
+.tira img{width:100%;height:100%;object-fit:cover}
+
+.privacidad{margin:16px 2px 0;font-size:12.5px;color:var(--muted);display:flex;gap:8px}
+.privacidad svg{flex:none;width:15px;height:15px;margin-top:2px}
+
+/* ---------- Catálogo ---------- */
+.filtros{display:grid;gap:10px;margin-bottom:16px}
+.fila-filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.segmento{display:inline-flex;padding:3px;border-radius:99px;background:var(--surface2);border:1px solid var(--line)}
+.segmento button{border:0;background:none;padding:6px 14px;border-radius:99px;font-size:13.5px;font-weight:500;color:var(--muted)}
+.segmento button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--sombra)}
+.buscar{flex:1;min-width:170px;position:relative}
+.buscar input{width:100%;padding:9px 14px 9px 36px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font-size:14px}
+.buscar svg{position:absolute;left:12px;top:50%;width:16px;height:16px;margin-top:-8px;color:var(--muted)}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 13px;font-size:13.5px}
+.chips button[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--bg)}
+.aviso{font-size:12.5px;color:var(--muted);background:var(--surface2);border-radius:10px;padding:8px 12px;margin-bottom:14px}
+
+.grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+@media (max-width:420px){.grilla{grid-template-columns:repeat(2,1fr);gap:10px}}
+.prenda{all:unset;cursor:pointer;display:flex;flex-direction:column;border-radius:var(--radio);background:var(--surface);border:1px solid var(--line);overflow:hidden;
+  transition:transform .15s, border-color .2s, box-shadow .2s}
+.prenda:hover{box-shadow:var(--sombra)}
+.prenda:active{transform:scale(.98)}
+.prenda:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.prenda[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent)}
+.prenda .foto{position:relative;aspect-ratio:4/5;background:var(--surface2)}
+.prenda .foto img{width:100%;height:100%;object-fit:cover}
+.prenda .tilde{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  background:#fffc;border:1px solid #0001;color:transparent;transition:background .2s, color .2s, transform .2s}
+.prenda[aria-pressed="true"] .tilde{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);transform:scale(1.08)}
+.prenda .tilde svg{width:15px;height:15px}
+.prenda .ej{position:absolute;left:8px;bottom:8px;font-size:10.5px;font-weight:600;letter-spacing:.04em;padding:2px 7px;border-radius:99px;background:#fffd;color:#5e564b}
+.prenda .info{display:flex;flex-direction:column;gap:1px;padding:10px 12px 12px}
+.prenda .tienda{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.prenda .nombre{font-weight:600;font-size:14.5px}
+.prenda .detalle{font-size:13px;color:var(--muted)}
+.vacio-cat{color:var(--muted);text-align:center;padding:30px 10px}
+
+/* ---------- Barra inferior ---------- */
+.barra{position:fixed;left:0;right:0;bottom:0;z-index:40;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
+  background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+.barra .dentro{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px;min-height:52px}
+.seleccion{flex:1;min-width:0;display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none}
+.seleccion::-webkit-scrollbar{display:none}
+.mini{position:relative;flex:none;width:44px;height:52px;border-radius:9px;overflow:hidden;background:var(--surface2);border:1px solid var(--line)}
+.mini img{width:100%;height:100%;object-fit:cover}
+.mini button{position:absolute;top:2px;right:2px;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:#000b;color:#fff;font-size:12px;line-height:18px}
+.seleccion .texto{font-size:13.5px;color:var(--muted);white-space:nowrap}
+#probar{padding:13px 22px;font-size:15px;white-space:nowrap}
+#probar:disabled{opacity:.6;cursor:progress}
+
+#toast{position:fixed;left:50%;bottom:calc(var(--barra) + env(safe-area-inset-bottom,0px) + 14px);transform:translate(-50%,12px);z-index:50;
+  width:max-content;max-width:min(92vw,460px);padding:11px 16px;border-radius:12px;background:var(--text);color:var(--bg);font-size:14px;
+  box-shadow:var(--sombra);opacity:0;pointer-events:none;transition:opacity .25s, transform .25s}
+#toast.ver{opacity:1;transform:translate(-50%,0)}
+#toast.error{background:var(--bad);color:#fff}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="marca">
+    <span class="tiendas">La Fábrica · Santos</span>
+    <h1>Probador <em>virtual</em></h1>
+  </div>
+  <p class="bajada">Subí una foto tuya, elegí prendas de las dos tiendas y mirá cómo te quedan.</p>
+</header>
+
+<main class="layout">
+  <section class="escenario" id="escenario" aria-labelledby="t-foto">
+    <div class="paso"><span class="n">1</span><h2 id="t-foto">Tu foto</h2></div>
+
+    <div id="subir">
+      <label class="zona" id="zona" tabindex="0">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="24" cy="9" r="4.5"/><path d="M17 44l2-14-4-1 2-11c.4-2 2-3 4-3h6c2 0 3.6 1 4 3l2 11-4 1 2 14"/><path d="M24 30v14"/>
+        </svg>
+        <strong>Subí una foto tuya de cuerpo entero</strong>
+        <span>Tocá para elegirla o sacarte una ahora</span>
+        <span class="boton primario">Elegir foto</span>
+        <input type="file" id="archivo" accept="image/*" hidden>
+      </label>
+      <ul class="tips">
+        <li>De frente y de pie, que se vea de la cabeza a los pies</li>
+        <li>Con buena luz y un fondo simple</li>
+        <li>Solo vos en la foto, con ropa que no sea muy holgada</li>
+      </ul>
+    </div>
+
+    <div id="visor" hidden>
+      <div class="lienzo" id="lienzo">
+        <img id="img-despues" alt="Vos con las prendas elegidas" hidden>
+        <img id="img-antes" alt="Tu foto original">
+        <div class="divisor" aria-hidden="true"></div>
+        <input type="range" id="comparar" min="0" max="100" value="0" aria-label="Comparar antes y después">
+        <span class="etiqueta antes">Antes</span>
+        <span class="etiqueta despues">Después</span>
+        <span class="pista" id="pista" hidden>↔ Deslizá para comparar</span>
+        <div class="cargando" id="cargando" hidden>
+          <p id="msg-carga">Probándote las prendas…</p>
+          <small id="cronometro">Puede tardar hasta un minuto</small>
+          <button type="button" id="cancelar">Cancelar</button>
+        </div>
+      </div>
+      <div class="acciones">
+        <button type="button" class="boton" id="cambiar-foto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>
+          Cambiar foto
+        </button>
+        <a class="boton" id="descargar" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m-5-5l5 5 5-5M5 20h14"/></svg>
+          Descargar
+        </a>
+        <button type="button" class="boton" id="compartir" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m-4 4l4-4 4 4M5 12v8h14v-8"/></svg>
+          Compartir
+        </button>
+      </div>
+      <div class="consultas" id="consultas"></div>
+      <div class="historial" id="historial" hidden>
+        <h3>Tus pruebas</h3>
+        <div class="tira" id="tira"></div>
+      </div>
+    </div>
+
+    <p class="privacidad">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      <span>Tu foto se envía a una IA (Gemini, de Google) solo para generar la prueba, y no la guardamos. El resultado es una simulación: el color y el calce reales pueden variar.</span>
+    </p>
+  </section>
+
+  <section class="catalogo" id="catalogo" aria-labelledby="t-catalogo">
+    <div class="paso"><span class="n">2</span><h2 id="t-catalogo">Elegí prendas</h2><span class="ayuda">Hasta 4 · una de cada tipo</span></div>
+    <div class="filtros">
+      <div class="fila-filtros">
+        <div class="segmento" id="f-tienda" role="group" aria-label="Tienda"></div>
+        <label class="buscar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input type="search" id="buscar" placeholder="Buscar prenda o color" aria-label="Buscar prenda o color">
+        </label>
+      </div>
+      <div class="chips" id="f-categoria" role="group" aria-label="Tipo de prenda"></div>
+    </div>
+    <p class="aviso" id="aviso-ejemplo" hidden>Estas prendas son de ejemplo, para probar cómo funciona.</p>
+    <div class="grilla" id="grilla"></div>
+    <p class="vacio-cat" id="sin-resultados" hidden>No encontramos prendas con esos filtros.</p>
+  </section>
+</main>
+
+<div class="barra">
+  <div class="dentro">
+    <div class="seleccion" id="seleccion" aria-live="polite"></div>
+    <button type="button" class="boton primario" id="probar">Probármelo</button>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+const LADO_MAX = 1536;          // px del lado más largo de la foto que se envía
+const MAX_PRENDAS = 4;
+const PROPORCIONES = ['1:1','2:3','3:2','3:4','4:3','4:5','5:4','9:16','16:9'];
+const CATEGORIAS = { superior:'Arriba', inferior:'Abajo', entero:'Vestidos y enteros', abrigo:'Abrigos', calzado:'Calzado', accesorio:'Accesorios' };
+const CHOQUES = { entero:['superior','inferior'], superior:['entero'], inferior:['entero'] };
+const MENSAJES_CARGA = ['Mirando tu foto…','Buscando tu talle…','Acomodando las prendas…','Ajustando caída y sombras…','Últimos detalles…'];
+const ICONO_TILDE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICONO_CHAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.4-4A8 8 0 1 1 8 18.6z"/></svg>';
+
+const $ = s => document.querySelector(s);
+const estado = {
+  catalogo: null, prendas: [], tienda: 'todas', categoria: 'todas', busqueda: '',
+  seleccion: [], foto: null, resultados: [], actual: null, cargando: null,
+};
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const normalizar = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const porId = id => estado.prendas.find(p => p.id === id);
+const nombreTienda = t => estado.catalogo?.tiendas?.[t]?.nombre || t;
+const precio = n => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(n);
+
+let reloj;
+function toast(mensaje, error = false) {
+  const t = $('#toast');
+  t.textContent = mensaje;
+  t.classList.toggle('error', error);
+  t.classList.add('ver');
+  clearTimeout(reloj);
+  reloj = setTimeout(() => t.classList.remove('ver'), error ? 7000 : 3200);
+}
+
+// ---------- Catálogo ----------
+async function cargarCatalogo() {
+  try {
+    const r = await fetch('catalogo.json', { cache: 'no-cache' });
+    if (!r.ok) throw new Error();
+    estado.catalogo = await r.json();
+    estado.prendas = (estado.catalogo.prendas || []).filter(p => p && p.id && p.imagen && CATEGORIAS[p.categoria]);
+    return true;
+  } catch {
+    $('#grilla').innerHTML = '<p class="vacio-cat">No pudimos cargar el catálogo. Recargá la página.</p>';
+    return false;
+  }
+}
+
+function renderFiltros() {
+  const tiendas = Object.keys(estado.catalogo.tiendas || {}).filter(t => estado.prendas.some(p => p.tienda === t));
+  const opcionesTienda = [['todas', 'Todas'], ...tiendas.map(t => [t, nombreTienda(t)])];
+  $('#f-tienda').hidden = tiendas.length < 2;
+  $('#f-tienda').innerHTML = opcionesTienda.map(([v, l]) =>
+    `<button type="button" data-v="${esc(v)}" aria-pressed="${estado.tienda === v}">${esc(l)}</button>`).join('');
+  const cats = Object.keys(CATEGORIAS).filter(c => estado.prendas.some(p => p.categoria === c));
+  $('#f-categoria').innerHTML = [['todas', 'Todo'], ...cats.map(c => [c, CATEGORIAS[c]])].map(([v, l]) =>
+    `<button type="button" data-v="${esc(v)}" aria-pressed="${estado.categoria === v}">${esc(l)}</button>`).join('');
+  $('#aviso-ejemplo').hidden = !estado.prendas.some(p => p.ejemplo);
+}
+
+function tarjeta(p) {
+  const detalle = [p.color, p.precio != null && p.precio !== '' ? precio(p.precio) : ''].filter(Boolean).join(' · ');
+  return `<button type="button" class="prenda" data-id="${esc(p.id)}" aria-pressed="${estado.seleccion.includes(p.id)}">
+    <span class="foto"><img src="${esc(p.imagen)}" alt="" loading="lazy">${p.ejemplo ? '<span class="ej">Ejemplo</span>' : ''}<span class="tilde" aria-hidden="true">${ICONO_TILDE}</span></span>
+    <span class="info"><span class="tienda">${esc(nombreTienda(p.tienda))}</span><span class="nombre">${esc(p.nombre)}</span>${detalle ? `<span class="detalle">${esc(detalle)}</span>` : ''}</span>
+  </button>`;
+}
+
+function renderGrilla() {
+  const q = normalizar(estado.busqueda.trim());
+  const lista = estado.prendas.filter(p =>
+    (estado.tienda === 'todas' || p.tienda === estado.tienda) &&
+    (estado.categoria === 'todas' || p.categoria === estado.categoria) &&
+    (!q || normalizar(`${p.nombre} ${p.color || ''} ${p.descripcion || ''} ${nombreTienda(p.tienda)}`).includes(q)));
+  $('#grilla').innerHTML = lista.map(tarjeta).join('');
+  $('#sin-resultados').hidden = lista.length > 0;
+}
+
+// ---------- Selección ----------
+function alternarPrenda(id) {
+  const p = porId(id);
+  if (!p) return;
+  if (estado.seleccion.includes(id)) {
+    estado.seleccion = estado.seleccion.filter(s => s !== id);
+    return renderSeleccion();
+  }
+  const chocan = [p.categoria, ...(CHOQUES[p.categoria] || [])];
+  const reemplazadas = estado.seleccion.filter(s => chocan.includes(porId(s).categoria));
+  if (estado.seleccion.length - reemplazadas.length >= MAX_PRENDAS) {
+    return toast(`Podés probarte hasta ${MAX_PRENDAS} prendas a la vez.`);
+  }
+  estado.seleccion = [...estado.seleccion.filter(s => !reemplazadas.includes(s)), id];
+  if (reemplazadas.length) toast(`Cambiamos ${reemplazadas.map(s => porId(s).nombre).join(' y ')} por ${p.nombre}.`);
+  renderSeleccion();
+}
+
+function renderSeleccion() {
+  document.querySelectorAll('.prenda').forEach(b => b.setAttribute('aria-pressed', estado.seleccion.includes(b.dataset.id)));
+  const elegidas = estado.seleccion.map(porId);
+  $('#seleccion').innerHTML = elegidas.length
+    ? elegidas.map(p => `<span class="mini"><img src="${esc(p.imagen)}" alt="${esc(p.nombre)}"><button type="button" data-quitar="${esc(p.id)}" aria-label="Quitar ${esc(p.nombre)}">×</button></span>`).join('')
+      + `<span class="texto">${elegidas.length} ${elegidas.length === 1 ? 'prenda' : 'prendas'}</span>`
+    : `<span class="texto">${estado.foto ? 'Elegí una o más prendas' : 'Subí tu foto y elegí prendas'}</span>`;
+}
+
+// ---------- Foto ----------
+function proporcionCercana(w, h) {
+  const r = Math.log(w / h);
+  return PROPORCIONES.reduce((mejor, p) => {
+    const [a, b] = p.split(':').map(Number);
+    return Math.abs(Math.log(a / b) - r) < Math.abs(Math.log(mejor[0] / mejor[1]) - r) ? [a, b, p] : mejor;
+  }, [1, 1, '1:1'])[2];
+}
+
+async function prepararFoto(archivo) {
+  const url = URL.createObjectURL(archivo);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const escala = Math.min(1, LADO_MAX / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * escala), h = Math.round(img.naturalHeight * escala);
+    const lienzo = document.createElement('canvas');
+    lienzo.width = w; lienzo.height = h;
+    lienzo.getContext('2d').drawImage(img, 0, 0, w, h);
+    return { dataUrl: lienzo.toDataURL('image/jpeg', 0.9), w, h, proporcion: proporcionCercana(w, h) };
+  } catch {
+    throw new Error('No pudimos abrir esa imagen. Probá con una foto JPG o PNG.');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function usarArchivo(archivo) {
+  if (!archivo) return;
+  if (estado.cargando) return toast('Esperá a que termine la prueba en curso.');
+  if (archivo.type && !archivo.type.startsWith('image/')) return toast('Elegí un archivo de imagen.', true);
+  try {
+    estado.foto = await prepararFoto(archivo);
+  } catch (e) {
+    return toast(e.message, true);
+  }
+  estado.resultados = [];
+  estado.actual = null;
+  const { w, h } = estado.foto;
+  if (Math.min(w, h) < 360) toast('La foto es chica: el resultado puede salir con poca definición.');
+  else if (w > h * 1.1) toast('Tip: con una foto vertical de cuerpo entero el resultado sale mejor.');
+  mostrarFoto();
+  renderSeleccion();
+}
+
+function mostrarFoto() {
+  $('#subir').hidden = true;
+  $('#visor').hidden = false;
+  const lienzo = $('#lienzo');
+  lienzo.style.setProperty('--ar', estado.foto.w / estado.foto.h);
+  $('#img-antes').src = estado.foto.dataUrl;
+  mostrarResultado(null);
+}
+
+// ---------- Resultado ----------
+function ponerComparacion(pos) {
+  const lienzo = $('#lienzo');
+  lienzo.style.setProperty('--pos', pos + '%');
+  lienzo.style.setProperty('--mostrar-antes', pos > 12 ? 1 : 0);
+  lienzo.classList.toggle('pos-cero', pos <= 0);
+  $('#comparar').value = pos;
+}
+
+function nombreArchivo(tipo) {
+  return `probador-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.${(tipo.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
+}
+
+function mostrarResultado(r) {
+  estado.actual = r;
+  const lienzo = $('#lienzo');
+  lienzo.classList.toggle('comparando', !!r);
+  $('#img-despues').hidden = !r;
+  $('#descargar').hidden = !r;
+  $('#compartir').hidden = !r || !navigator.canShare;
+  $('#pista').hidden = !r;
+  $('#pista').style.opacity = 1;
+  if (r) {
+    $('#img-despues').src = r.imagen;
+    $('#descargar').href = r.imagen;
+    $('#descargar').download = nombreArchivo(r.imagen.slice(5, r.imagen.indexOf(';')));
+  }
+  ponerComparacion(0);
+  renderConsultas(r ? r.prendas : []);
+  renderHistorial();
+}
+
+function renderConsultas(ids) {
+  const porTienda = {};
+  ids.map(porId).filter(Boolean).forEach(p => (porTienda[p.tienda] ||= []).push(p));
+  $('#consultas').innerHTML = Object.entries(porTienda).map(([t, prendas]) => {
+    const numero = String(estado.catalogo.tiendas?.[t]?.whatsapp || '').replace(/\D/g, '');
+    if (!numero) return '';
+    const texto = `¡Hola! Me probé en el probador virtual:\n${prendas.map(p => `• ${p.nombre}${p.color ? ` (${p.color})` : ''}`).join('\n')}\n¿Tienen mi talle disponible?`;
+    return `<a class="boton wsp" href="https://wa.me/${numero}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener">${ICONO_CHAT}Consultar en ${esc(nombreTienda(t))}</a>`;
+  }).join('');
+}
+
+function renderHistorial() {
+  const hay = estado.resultados.length > 1;
+  $('#historial').hidden = !hay;
+  if (!hay) return;
+  $('#tira').innerHTML = estado.resultados.map((r, i) => {
+    const nombres = r.prendas.map(id => porId(id)?.nombre).filter(Boolean).join(', ');
+    return `<button type="button" data-i="${i}" aria-current="${r === estado.actual}" aria-label="Ver prueba: ${esc(nombres)}" title="${esc(nombres)}"><img src="${r.imagen}" alt=""></button>`;
+  }).join('');
+}
+
+function mostrarCarga(activa) {
+  $('#cargando').hidden = !activa;
+  $('#probar').disabled = activa;
+  $('#probar').textContent = activa ? 'Probando…' : 'Probármelo';
+  clearInterval(mostrarCarga.timer);
+  if (!activa) return;
+  const inicio = Date.now();
+  $('#msg-carga').textContent = MENSAJES_CARGA[0];
+  $('#cronometro').textContent = 'Puede tardar hasta un minuto';
+  mostrarCarga.timer = setInterval(() => {
+    const s = Math.round((Date.now() - inicio) / 1000);
+    $('#msg-carga').textContent = MENSAJES_CARGA[Math.min(Math.floor(s / 6), MENSAJES_CARGA.length - 1)];
+    $('#cronometro').textContent = `${s} s · puede tardar hasta un minuto`;
+  }, 1000);
+}
+
+async function probar() {
+  if (estado.cargando) return;
+  if (!estado.foto) {
+    toast('Primero subí una foto tuya de cuerpo entero.');
+    $('#escenario').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return $('#zona').focus({ preventScroll: true });
+  }
+  if (!estado.seleccion.length) {
+    toast('Elegí al menos una prenda del catálogo.');
+    return $('#catalogo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  const ids = [...estado.seleccion];
+  const foto = estado.foto;
+  const control = new AbortController();
+  estado.cargando = control;
+  mostrarCarga(true);
+  if (window.matchMedia('(max-width: 899px)').matches) $('#escenario').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  try {
+    let r;
+    try {
+      r = await fetch(new URL('../api/probar', location.href), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foto: foto.dataUrl, prendas: ids, proporcion: foto.proporcion }),
+        signal: control.signal,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      throw new Error('No pudimos conectar con el probador. Revisá tu conexión y probá de nuevo.');
+    }
+    const datos = await r.json().catch(() => ({}));
+    if (!r.ok || !datos.imagen) {
+      throw new Error(datos.error || (r.status === 404
+        ? 'El probador no está activo en este sitio todavía.'
+        : 'No pudimos generar la prueba. Probá de nuevo.'));
+    }
+    if (foto !== estado.foto) return; // cambiaron la foto mientras tanto
+    const resultado = { imagen: datos.imagen, prendas: ids };
+    estado.resultados.unshift(resultado);
+    mostrarResultado(resultado);
+  } catch (e) {
+    if (e.name === 'AbortError') toast('Prueba cancelada.');
+    else toast(e.message, true);
+  } finally {
+    estado.cargando = null;
+    mostrarCarga(false);
+  }
+}
+
+async function compartir() {
+  const r = estado.actual;
+  if (!r) return;
+  try {
+    const blob = await (await fetch(r.imagen)).blob();
+    const archivo = new File([blob], nombreArchivo(blob.type), { type: blob.type });
+    if (!navigator.canShare?.({ files: [archivo] })) return toast('Tu navegador no permite compartir imágenes. Usá Descargar.');
+    await navigator.share({ files: [archivo], title: 'Mi prueba en el probador virtual' });
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('No se pudo compartir la imagen.', true);
+  }
+}
+
+// ---------- Eventos ----------
+function conectar() {
+  const archivo = $('#archivo');
+  archivo.addEventListener('change', () => { usarArchivo(archivo.files[0]); archivo.value = ''; });
+  $('#zona').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); archivo.click(); } });
+  $('#cambiar-foto').addEventListener('click', () => archivo.click());
+  const zona = $('#zona');
+  ['dragenter', 'dragover'].forEach(t => zona.addEventListener(t, e => { e.preventDefault(); zona.classList.add('arrastrando'); }));
+  ['dragleave', 'drop'].forEach(t => zona.addEventListener(t, () => zona.classList.remove('arrastrando')));
+  zona.addEventListener('drop', e => { e.preventDefault(); usarArchivo(e.dataTransfer.files[0]); });
+
+  $('#f-tienda').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    estado.tienda = b.dataset.v; renderFiltros(); renderGrilla();
+  });
+  $('#f-categoria').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    estado.categoria = b.dataset.v; renderFiltros(); renderGrilla();
+  });
+  $('#buscar').addEventListener('input', e => { estado.busqueda = e.target.value; renderGrilla(); });
+  $('#grilla').addEventListener('click', e => { const b = e.target.closest('.prenda'); if (b) alternarPrenda(b.dataset.id); });
+  $('#seleccion').addEventListener('click', e => { const b = e.target.closest('[data-quitar]'); if (b) alternarPrenda(b.dataset.quitar); });
+
+  $('#probar').addEventListener('click', probar);
+  $('#cancelar').addEventListener('click', () => estado.cargando?.abort());
+  $('#compartir').addEventListener('click', compartir);
+  $('#comparar').addEventListener('input', e => { ponerComparacion(Number(e.target.value)); $('#pista').style.opacity = 0; });
+  $('#tira').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) mostrarResultado(estado.resultados[Number(b.dataset.i)]); });
+}
+
+(async function iniciar() {
+  conectar();
+  renderSeleccion();
+  if (!await cargarCatalogo()) return;
+  renderFiltros();
+  renderGrilla();
+  renderSeleccion();
+})();
+</script>
+</body>
+</html>
