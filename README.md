@@ -18,7 +18,8 @@ PWA instalable y sin conexión (abre `runner/index.html`). Los datos se guardan 
 
 Juego estilo tycoon de Roblox para el móvil (abre `tycoon/index.html` o instala el APK de la release `tycoon-latest`, que compila `.github/workflows/tycoon-apk.yml`).
 
-- **Vista 2.5D** con cámara inclinada (ángulo cenital, medio o bajo), sombras suaves, luz de ventanas, humo y máquinas en 3D. Fábrica grande con zona de producción, zona de máquinas y **zona de descanso** para decorar.
+- **3D real** (three.js incluido en `tycoon/vendor/`, funciona sin conexión): cámara en perspectiva que se gira con dos dedos o con 🔄, sombras, máquinas y muebles modelados. El código está en `index.html` (lógica), `world3d.js` (escena), `char3d.js` (personaje y vestuario) y `draw2d.js` (texturas y textos).
+- **Personaje 3D estilo anime** con todo el vestuario desbloqueado: 38 tops y vestidos, 24 partes de abajo, medias, guantes, calzado, 20 accesorios de cabeza, collares, alas y colas, estampados y 16 conjuntos completos.
 - **Menú**: pantalla de título con continuar, nueva partida y cargar (3 ranuras), guardar, opciones y salir.
 - **Personaje** mujer u hombre con vista de frente, espalda y perfil, **física** (rebote del cuerpo, pelo y falda) y 11 barras de físico (incluye glúteos). Ropa por nivel y dinero: pantalones, pitillo, ancho, shorts, minishorts, microshorts, faldas (larga, midi, tubo, plisada, mini, micro), bikini, bañador, vestidos, tops y más.
 - **5 fábricas** con 3 cintas cada una: dispensadores, escáner láser ×2, duplicador y prensa hidráulica ×3, más 5 **máquinas independientes** con 10 niveles (mina, imprenta de billetes, servidores, planta solar y brazo robótico).

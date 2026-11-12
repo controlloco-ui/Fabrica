@@ -29,7 +29,7 @@ jobs:
       - name: Copiar el juego a los assets
         run: |
           mkdir -p tycoon-android/app/src/main/assets
-          cp tycoon/index.html tycoon-android/app/src/main/assets/
+          cp -r tycoon/index.html tycoon/*.js tycoon/vendor tycoon-android/app/src/main/assets/
 
       - name: Compilar APK
         working-directory: tycoon-android
