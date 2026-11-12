@@ -277,12 +277,28 @@ class Char3D {
     const torso = this.torso = new THREE.Group(); torso.position.y = hipY; body.add(torso);   // pivota en la cadera
     const T = (y) => y - hipY;                        // a coordenadas del grupo torso
 
-    // --- torso: superficie de revolución con la ropa pintada ---
-    const pts = []; const N = 26;
-    for (let i = 0; i <= N; i++) { const v = i / N; pts.push(new THREE.Vector2(rAt(v), vy(v))); }
-    const tg = new THREE.LatheGeometry(pts, 28, Math.PI, Math.PI * 2);
-    const tm = this.mesh(tg, this.tmat(this.torsoTex(L, top, bot, skin, topC, botC, f)), torso, 0, -hipY, 0);
-    tm.scale.z = DZ;
+    // --- torso: una sola malla continua (cintura, cadera y glúteos) con la ropa pintada encima ---
+    const gl = L.glutes === undefined ? 0.5 : L.glutes, G = (f ? 0.092 : 0.045) * (0.3 + 1.0 * gl) * Math.pow(wf, 0.6);
+    // punto del cuerpo para una altura v y un ángulo u (u = 0.5 delante, 0 detrás)
+    const bodyPt = (v, u, o) => {
+      const phi = Math.PI + u * 2 * Math.PI; let a = u * 2 * Math.PI; if (a > Math.PI) a -= 2 * Math.PI;
+      const r = rAt(clamp(v, 0, 1)), sn = Math.sin(phi), cs = Math.cos(phi);
+      const gv = Math.exp(-Math.pow((v - 0.125) / (v < 0.125 ? 0.105 : 0.16), 2)), ga = Math.exp(-Math.pow((Math.abs(a) - 0.5) / 0.42, 2)), cl = Math.exp(-Math.pow(a / 0.085, 2));
+      const b = G * gv * (ga - 0.34 * cl);
+      o.x = r * sn + b * sn * 0.8; o.z = r * DZ * cs + b * cs * 1.25; o.w = gv * ga; o.a = a; return o;
+    };
+    const NR = 44, MS = 44, pos = [], uvs = [], idx = [], o = {};
+    const jg = { i: [], w: [], sd: [], nx: [], nz: [] };
+    for (let i = 0; i <= NR; i++) for (let k = 0; k <= MS; k++) {
+      const v = -0.12 + (i / NR) * 1.12, u = k / MS; bodyPt(v, u, o);
+      if (v < 0) { const sh = 1 + v * 2.2; o.x *= sh; o.z *= sh; }    // cierre suave por debajo, hacia los muslos
+      if (o.w > 0.06) { const n = Math.hypot(o.x, o.z) || 1; jg.i.push(pos.length / 3); jg.w.push(o.w); jg.sd.push(o.a > 0 ? 1 : -1); jg.nx.push(o.x / n); jg.nz.push(o.z / n); }
+      pos.push(o.x, vy(v), o.z); uvs.push(u, v);
+    }
+    for (let i = 0; i < NR; i++) for (let k = 0; k < MS; k++) { const a = i * (MS + 1) + k, b = a + 1, c = a + MS + 1, d = c + 1; idx.push(a, b, c, b, d, c); }
+    const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); tg.setIndex(idx); tg.computeVertexNormals();
+    this.mesh(tg, this.tmat(this.torsoTex(L, top, bot, skin, topC, botC, f)), torso, 0, -hipY, 0);
+    this.hipGeo = tg; this.hipBase = Float32Array.from(pos); this.hipJ = jg; this.hipOn = false;
     // cuello y hombros
     const neckR = f ? 0.036 : 0.052, neckY = vy(1), headY = neckY + 0.025 + headR * 0.9;
     this.mesh(new THREE.CylinderGeometry(neckR, neckR * 1.15, 0.1, 12), top.neck === 'high' ? toon(topC) : skinM, torso, 0, T(neckY + 0.03), 0);
@@ -306,27 +322,7 @@ class Char3D {
         m.scale.set(1, 0.96, 1); m.rotation.x = -0.25; m.userData.y0 = T(by); this.breasts.push(m);
       });
     }
-    // --- glúteos ---
     this.glutes = [];
-    {
-      const gl = this.d.glutes, gR = (f ? 0.08 : 0.062) * (0.72 + 0.66 * gl) * Math.pow(wf, 0.6), gy = vy(0.115), gz = -(hipR * DZ * 0.47);
-      const cov = top.leo || top.pants || top.skirt || (bot && true);
-      const gcol = top.leo || top.pants || top.skirt ? topC : botC;
-      const shade = (c, w, h) => { const g1 = c.createLinearGradient(0, 0, 0, h); g1.addColorStop(0, 'rgba(255,255,255,.16)'); g1.addColorStop(0.45, 'rgba(255,255,255,0)'); g1.addColorStop(0.8, 'rgba(90,40,40,.12)'); g1.addColorStop(1, 'rgba(70,30,30,.38)'); c.fillStyle = g1; c.fillRect(0, 0, w, h); const g2 = c.createRadialGradient(w * 0.5, h * 0.42, 2, w * 0.5, h * 0.42, w * 0.3); g2.addColorStop(0, 'rgba(255,255,255,.22)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(0, 0, w, h); };
-      const gtex = () => canvasTex(64, 64, (c, w, h) => {
-        c.fillStyle = skin; c.fillRect(0, 0, w, h);
-        if (!cov) { shade(c, w, h); return; }
-        const cut = (bot && bot.cut) || top.leo;
-        c.fillStyle = clothFill(c, gcol, top.leo || top.pants || top.skirt ? L.topP : L.botP);
-        c.fillRect(0, 0, w, h);
-        if (cut) { c.fillStyle = skin; c.fillRect(0, h * ((bot && bot.cheek) || 0.78), w, h); c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(0, h * ((bot && bot.cheek) || 0.78) - 2, w, 2); }
-        shade(c, w, h);
-      });
-      [-1, 1].forEach(s => {
-        const m = this.mesh(new THREE.SphereGeometry(gR, 26, 20), this.tmat(gtex()), torso, s * gR * 0.76, T(gy), gz);
-        m.scale.set(1.04, 1.1, 0.98); m.userData.s = s; m.userData.z0 = gz; m.rotation.y = Math.PI / 2; m.userData.y0 = T(gy); this.glutes.push(m);
-      });
-    }
     // --- falda / vestido ---
     this.skirt = null;
     const sk = top.skirt ? top : (bot && bot.skirt ? bot : null);
@@ -342,15 +338,21 @@ class Char3D {
         if (sk.trim || sk.lace) { c.fillStyle = 'rgba(255,255,255,.75)'; c.fillRect(0, h - 8, w, 3); }
         if (sk.sash) { c.fillStyle = mixHex(col, '#000000', 0.35); c.fillRect(0, 0, w, 10); }
       });
-      // perfil: cintura → cadera (cubre los glúteos) → bajo
-      const dHip = yT - vy(V_HIP - 0.08), rHip = hipR * 1.12, sp = [new THREE.Vector2(rB, -len)];
-      if (len > dHip * 1.15) sp.push(new THREE.Vector2(Math.min(rB, rHip + (rB - rHip) * 0.25), -dHip * 1.6 > -len ? -dHip * 1.6 : -len * 0.9), new THREE.Vector2(rHip, -dHip));
-      sp.push(new THREE.Vector2(rT + (rHip - rT) * 0.55, -Math.min(len, dHip) * 0.45), new THREE.Vector2(rT, 0));
-      const g = new THREE.LatheGeometry(sp, 28, Math.PI, Math.PI * 2);
+      // la tela nunca queda por dentro del cuerpo: cada punto se abre hasta el contorno más ancho que tiene encima
+      const RS = 12, SM = 44, sp = [], su = [], si = [], env = new Float32Array(SM + 1), tt = [], q = {};
+      for (let i = 0; i <= RS; i++) for (let k = 0; k <= SM; k++) {
+        const t = i / RS, u = k / SM, y = yT - len * t, v = (y - y0) / TH, phi = Math.PI + u * 2 * Math.PI;
+        const pr = rT + (rB - rT) * Math.pow(t, 0.75), px = pr * Math.sin(phi), pz = pr * 0.94 * Math.cos(phi), rho = Math.hypot(px, pz) || 1e-6;
+        if (v >= -0.02) { bodyPt(Math.max(0, v), u, q); env[k] = Math.max(env[k], Math.hypot(q.x, q.z) + 0.014); }
+        const sc = Math.max(1, env[k] / rho);
+        sp.push(px * sc, -len * t, pz * sc); su.push(u, 1 - t); tt.push(t);
+      }
+      for (let i = 0; i < RS; i++) for (let k = 0; k < SM; k++) { const a = i * (SM + 1) + k, b = a + 1, c = a + SM + 1, d = c + 1; si.push(a, c, b, b, c, d); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(su, 2)); g.setIndex(si); g.computeVertexNormals();
       const piv = new THREE.Group(); piv.position.y = T(yT); torso.add(piv);
-      const m = this.mesh(g, this.tmat(tex, { side: THREE.DoubleSide }), piv, 0, 0, 0); m.scale.z = 0.94;
-      this.skirt = piv; this.glutes.forEach(q => { q.visible = sk.skirt < 0.2; });
-    }
+      this.mesh(g, this.tmat(tex, { side: THREE.DoubleSide }), piv, 0, 0, 0);
+      this.skirt = piv; this.skGeo = g; this.skBase = Float32Array.from(sp); this.skT = tt; this.skM = SM; this.skLen = len;
+    } else this.skGeo = null;
     // --- brazos ---
     const upL = 0.25, foL = 0.23;
     const slv = top.sleeve || 0, gh = glove.h || 0;
@@ -649,13 +651,33 @@ class Char3D {
     this.torso.rotation.y = sn * 0.1 * a; this.torso.rotation.z = Math.cos(ph) * 0.035 * a * (d.f ? 1.4 : 0.6); this.torso.rotation.x = st.run ? 0.16 * a : 0.03 * a;
     const breathe = 1 + Math.sin(t * 2) * 0.012;
     this.breasts.forEach((m, i) => { m.position.y = m.userData.y0 + j.b * 0.006 * (0.3 + d.bust) + Math.sin(t * 2) * 0.002; m.scale.set(breathe, 0.96 - j.b * 0.02, 1 + j.b * 0.015); });
-    // cada lado sube y baja con su paso, se aplasta y estira, y arrastra el rebote del muelle
-    this.glutes.forEach(m => { const sd = m.userData.s, k = 0.35 + d.glutes, step = Math.sin(ph + (sd > 0 ? 0 : Math.PI)) * a, w = j.g * k;
-      m.position.y = m.userData.y0 + step * 0.012 * k + w * 0.007; m.position.z = m.userData.z0 - Math.abs(w) * 0.003;
-      m.scale.set(1.04 + w * 0.02, 1.1 - w * 0.045 + step * 0.03, 0.98 + w * 0.03); m.rotation.z = step * 0.1 * sd + w * 0.03 * sd; });
+    // física de la cadera: cada lado sube con su paso y arrastra el rebote del muelle (se deforma la malla, no piezas sueltas)
+    const hj = this.hipJ, active = a > 0.02 || Math.abs(j.g) > 0.02;
+    if (hj && (active || this.hipOn)) {
+      const P_ = this.hipGeo.attributes.position, B = this.hipBase, k = 0.35 + d.glutes;
+      for (let n = 0; n < hj.i.length; n++) {
+        const vi = hj.i[n] * 3, w = hj.w[n], sd = hj.sd[n], step = Math.sin(ph + (sd > 0 ? 0 : Math.PI)) * a, wob = j.g * k * sd;
+        const out = (wob * 0.006 + step * 0.004) * w;
+        P_.array[vi] = B[vi] + hj.nx[n] * out; P_.array[vi + 1] = B[vi + 1] + (step * 0.012 * k + j.g * k * 0.007) * w; P_.array[vi + 2] = B[vi + 2] + hj.nz[n] * out;
+      }
+      P_.needsUpdate = true; this.hipOn = active;
+    }
+    // física de la tela: el bajo se retrasa al andar, se abre con cada zancada y ondea con el muelle
+    if (this.skGeo) {
+      const P_ = this.skGeo.attributes.position, B = this.skBase, M = this.skM + 1, tt = this.skT, sw = j.s, len = this.skLen;
+      const lf = Math.sin(ph) * a;                                     // pierna derecha delante cuando lf > 0
+      for (let n = 0; n < tt.length; n++) {
+        const tq = tt[n] * tt[n]; if (tq === 0) continue;
+        const vi = n * 3, u = (n % M) / (M - 1), phi = Math.PI + u * 2 * Math.PI, sx = Math.sin(phi), cz = Math.cos(phi);
+        const front = Math.max(0, cz), lift = Math.max(0, (sx > 0 ? lf : -lf)) * front;
+        const flut = Math.sin(t * 5 + phi * 3) * 0.006 * (a + Math.abs(sw) * 0.3) + sw * 0.01;
+        const rad = (lift * 0.9 * len * 0.35 + flut) * tq;
+        P_.array[vi] = B[vi] + sx * rad + sw * 0.012 * tq; P_.array[vi + 1] = B[vi + 1] + (lift * len * 0.22 + Math.abs(sw) * 0.004) * tq; P_.array[vi + 2] = B[vi + 2] + cz * rad - a * 0.035 * tq;
+      }
+      P_.needsUpdate = true;
+    }
     this.head.rotation.y = Math.sin(t * 0.7) * 0.06 * (1 - a) - this.torso.rotation.y * 0.6; this.head.rotation.x = Math.sin(t * 0.9) * 0.025;
     this.sway.forEach(s => { s.g.rotation.x = s.rx + (s.tail ? Math.sin(t * 2.2) * 0.12 : 0) + j.h * 0.035 * s.k + a * 0.22 * s.k * (s.tail ? 0.3 : 1); s.g.rotation.z = s.rz + j.s * 0.02 * s.k + (s.tail ? Math.sin(t * 1.6) * 0.3 : Math.sin(t * 1.1 + s.rz) * 0.015); });
-    if (this.skirt) { this.skirt.rotation.x = j.s * 0.018 + a * 0.05; this.skirt.rotation.z = j.s * 0.03; }
     if (this.wings) this.wings.forEach(w => { w.g.rotation.y = w.s * (-0.5 + Math.sin(t * 3) * 0.18); });
     if (this.halo) this.halo.position.y += Math.sin(t * 2) * 0.0004;
     this.blinkT -= dt; if (this.blinkT < 0) { this.blink = 0.12; this.blinkT = 2 + Math.random() * 4; }
