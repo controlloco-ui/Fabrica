@@ -60,33 +60,33 @@ const TOPS = {
 };
 // legs: cuánta pierna cubre (0..1) · skirt: largo de falda · rise: altura de la cintura · loose: holgura
 const BOTS = {
-  vaqueros: { name: 'Vaqueros', icon: '👖', legs: 1, rise: .3 },
-  pitillo: { name: 'Pitillo', icon: '👖', legs: 1, rise: .34 },
-  ancho: { name: 'Pantalón ancho', icon: '👖', legs: 1, rise: .3, loose: 1.35 },
-  campana: { name: 'Campana', icon: '👖', legs: 1, rise: .3, bell: 1.7 },
-  cargo: { name: 'Cargo', icon: '👖', legs: 1, rise: .28, loose: 1.2 },
-  chandal: { name: 'Chándal', icon: '🏃', legs: 1, rise: .3, loose: 1.15, stripe: 1 },
-  leggings: { name: 'Leggings', icon: '🦵', legs: 1, rise: .38 },
-  cuero: { name: 'Pantalón de cuero', icon: '🖤', legs: 1, rise: .3 },
-  pirata: { name: 'Pirata', icon: '👖', legs: .7, rise: .3 },
-  shorts: { name: 'Shorts', icon: '🩳', legs: .32, rise: .3, loose: 1.12 },
-  ciclista: { name: 'Ciclista', icon: '🚴', legs: .3, rise: .36 },
-  minishort: { name: 'Minishorts', icon: '🩳', legs: .07, rise: .26 },
-  hotpants: { name: 'Hot pants', icon: '🩳', legs: 0, rise: .2, cut: 1, cheek: .7 },
-  microshort: { name: 'Microshorts', icon: '🩳', legs: .03, rise: .2 },
-  bikini: { name: 'Bikini', icon: '👙', legs: 0, rise: .18, cut: 1 },
-  bikinialto: { name: 'Bikini de talle alto', icon: '👙', legs: 0, rise: .34, cut: 1 },
-  brasileno: { name: 'Bikini brasileño', icon: '👙', legs: 0, rise: .17, cut: 1, cheek: .55 },
-  faldalarga: { name: 'Falda larga', icon: '👗', skirt: .86, rise: .34, flare: 1.4 },
-  midi: { name: 'Falda midi', icon: '👗', skirt: .56, rise: .34, flare: 1.3 },
-  tubo: { name: 'Falda tubo', icon: '👗', skirt: .44, rise: .38, flare: 1.0 },
-  vuelo: { name: 'Falda de vuelo', icon: '👗', skirt: .28, rise: .34, flare: 1.7 },
-  plisada: { name: 'Falda plisada', icon: '👗', skirt: .15, rise: .3, flare: 1.45, pleats: 1 },
-  minifalda: { name: 'Minifalda', icon: '👗', skirt: .12, rise: .28, flare: 1.15 },
-  microfalda: { name: 'Microfalda', icon: '👗', skirt: .065, rise: .22, flare: 1.2 },
-  cinturon: { name: 'Falda cinturón', icon: '👗', skirt: .04, rise: .2, flare: 1.15 },
-  tutu: { name: 'Tutú', icon: '🩰', skirt: .1, rise: .3, flare: 2.2, pleats: 1 },
-  pareo: { name: 'Pareo', icon: '🏝️', skirt: .4, rise: .24, flare: 1.12 },
+  vaqueros: { name: 'Vaqueros', icon: '👖', legs: 1, rise: 0.4 },
+  pitillo: { name: 'Pitillo', icon: '👖', legs: 1, rise: 0.42 },
+  ancho: { name: 'Pantalón ancho', icon: '👖', legs: 1, rise: 0.4, loose: 1.35 },
+  campana: { name: 'Campana', icon: '👖', legs: 1, rise: 0.4, bell: 1.7 },
+  cargo: { name: 'Cargo', icon: '👖', legs: 1, rise: 0.38, loose: 1.2 },
+  chandal: { name: 'Chándal', icon: '🏃', legs: 1, rise: 0.38, loose: 1.15, stripe: 1 },
+  leggings: { name: 'Leggings', icon: '🦵', legs: 1, rise: 0.44 },
+  cuero: { name: 'Pantalón de cuero', icon: '🖤', legs: 1, rise: 0.4 },
+  pirata: { name: 'Pirata', icon: '👖', legs: .7, rise: 0.4 },
+  shorts: { name: 'Shorts', icon: '🩳', legs: .32, rise: 0.4, loose: 1.12 },
+  ciclista: { name: 'Ciclista', icon: '🚴', legs: .3, rise: 0.42 },
+  minishort: { name: 'Minishorts', icon: '🩳', legs: .07, rise: 0.4, under: 0.05 },
+  hotpants: { name: 'Hot pants', icon: '🩳', legs: 0, rise: 0.4, under: 0.12, cut: 1 },
+  microshort: { name: 'Microshorts', icon: '🩳', legs: .03, rise: 0.38, under: 0.09 },
+  bikini: { name: 'Bikini', icon: '👙', legs: 0, rise: 0.3, under: 0.1, cut: 1 },
+  bikinialto: { name: 'Bikini de talle alto', icon: '👙', legs: 0, rise: 0.42, under: 0.1, cut: 1 },
+  brasileno: { name: 'Bikini brasileño', icon: '👙', legs: 0, rise: 0.32, under: 0.16, cut: 1 },
+  faldalarga: { name: 'Falda larga', icon: '👗', skirt: .86, rise: 0.42, flare: 1.4 },
+  midi: { name: 'Falda midi', icon: '👗', skirt: .56, rise: 0.42, flare: 1.3 },
+  tubo: { name: 'Falda tubo', icon: '👗', skirt: .44, rise: 0.44, flare: 1.0 },
+  vuelo: { name: 'Falda de vuelo', icon: '👗', skirt: .28, rise: 0.42, flare: 1.7 },
+  plisada: { name: 'Falda plisada', icon: '👗', skirt: .15, rise: 0.4, flare: 1.45, pleats: 1 },
+  minifalda: { name: 'Minifalda', icon: '👗', skirt: .12, rise: 0.4, flare: 1.15 },
+  microfalda: { name: 'Microfalda', icon: '👗', skirt: .065, rise: 0.38, flare: 1.2 },
+  cinturon: { name: 'Falda cinturón', icon: '👗', skirt: .04, rise: 0.36, flare: 1.15 },
+  tutu: { name: 'Tutú', icon: '🩰', skirt: .1, rise: 0.4, flare: 2.2, pleats: 1 },
+  pareo: { name: 'Pareo', icon: '🏝️', skirt: .4, rise: 0.34, flare: 1.12 },
 };
 const SHOES = {
   zapatillas: { name: 'Zapatillas', icon: '👟' }, descalzo: { name: 'Descalza', icon: '🦶' }, bailarinas: { name: 'Bailarinas', icon: '🥿' },
@@ -449,6 +449,8 @@ class Char3D {
       c.strokeStyle = 'rgba(120,60,40,.16)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(fx - 30, Y(0.93)); c.quadraticCurveTo(fx - 12, Y(0.9), fx - 3, Y(0.92)); c.moveTo(fx + 30, Y(0.93)); c.quadraticCurveTo(fx + 12, Y(0.9), fx + 3, Y(0.92)); c.stroke();
       if (!f) { c.beginPath(); c.moveTo(fx - 26, Y(0.66)); c.quadraticCurveTo(fx - 12, Y(0.62), fx, Y(0.66)); c.quadraticCurveTo(fx + 12, Y(0.62), fx + 26, Y(0.66)); c.stroke(); }
       c.beginPath(); c.moveTo(0, Y(0.9)); c.lineTo(0, Y(0.42)); c.moveTo(w, Y(0.9)); c.lineTo(w, Y(0.42)); c.stroke();
+      // deja ver la parte baja de las nalgas (por detrás, u≈0): la prenda sube de talle y se recorta por abajo
+      const carveUnder = (x, un) => { if (!un) return; [w * 0.115, w * 0.885].forEach(sx => { x.beginPath(); x.ellipse(sx, Y(-0.01), w * 0.105, h * un * 1.5, 0, 0, 7); x.fill(); }); };
       const carveSides = (x, lo, hi) => { [w * 0.25, w * 0.75].forEach(sx => { x.beginPath(); x.moveTo(sx - 52, Y(lo)); x.quadraticCurveTo(sx, Y(hi) - 6, sx + 52, Y(lo)); x.closePath(); x.fill(); }); };
       // --- parte de abajo ---
       if (bot) {
@@ -456,7 +458,7 @@ class Char3D {
         x.fillStyle = clothFill(x, botC, L.botP); x.fillRect(0, Y(bot.rise), w, h);
         x.fillStyle = 'rgba(0,0,0,.22)'; x.fillRect(0, Y(bot.rise), w, 4);
         if (bot.legs >= 0.3 && !bot.skirt) { x.fillRect(fx - 1, Y(bot.rise), 2, 30); x.fillStyle = 'rgba(255,255,255,.5)'; x.beginPath(); x.arc(fx, Y(bot.rise) + 8, 2.5, 0, 7); x.fill(); }
-        if (bot.cut) { x.globalCompositeOperation = 'destination-out'; carveSides(x, 0, bot.rise - 0.02); x.globalCompositeOperation = 'source-over'; }
+        x.globalCompositeOperation = 'destination-out'; x.fillStyle = '#000'; if (bot.cut) carveSides(x, 0, Math.min(bot.rise - 0.02, 0.3)); carveUnder(x, bot.under); x.globalCompositeOperation = 'source-over';
         c.drawImage(L2, 0, 0);
       }
       // --- parte de arriba ---
@@ -467,7 +469,7 @@ class Char3D {
       x.fillStyle = fillC; x.fillRect(0, Y(bodyHi), w, Y(lo) - Y(bodyHi));
       if (st === 1 || st === 2) { const sw = st === 2 ? 16 : 7; [fx - 36, fx + 36, 30, w - 30].forEach(sx => x.fillRect(sx - sw / 2, 0, sw, Y(bodyHi) + 2)); }
       if (st === 'halter') { x.lineWidth = 9; x.strokeStyle = fillC; x.beginPath(); x.moveTo(fx - 34, Y(bodyHi) + 2); x.lineTo(fx - 8, 0); x.moveTo(fx + 34, Y(bodyHi) + 2); x.lineTo(fx + 8, 0); x.stroke(); x.fillRect(0, 0, 40, 5); x.fillRect(w - 40, 0, 40, 5); }
-      x.globalCompositeOperation = 'destination-out';
+      x.globalCompositeOperation = 'destination-out'; x.fillStyle = '#000';
       if (top.neck === 'crew') { x.beginPath(); x.ellipse(fx, 0, 20, 12, 0, 0, 7); x.fill(); x.beginPath(); x.ellipse(0, 0, 16, 6, 0, 0, 7); x.ellipse(w, 0, 16, 6, 0, 0, 7); x.fill(); }
       if (top.neck === 'scoop') { x.beginPath(); x.ellipse(fx, Y(bodyHi) - 4, 28, 22, 0, 0, 7); x.fill(); }
       if (top.neck === 'v') { x.beginPath(); x.moveTo(fx - 26, 0); x.lineTo(fx, Y(0.7)); x.lineTo(fx + 26, 0); x.fill(); }
@@ -476,7 +478,7 @@ class Char3D {
       if (top.neck === 'open' || top.neck === 'suit') { x.beginPath(); x.moveTo(fx - 26, 0); x.lineTo(fx - 12, Y(lo)); x.lineTo(fx + 12, Y(lo)); x.lineTo(fx + 26, 0); x.fill(); }
       if (top.back === 'open') { x.fillRect(0, Y(bodyHi) - 2, 50, Y(V_WAIST + 0.04) - Y(bodyHi)); x.fillRect(w - 50, Y(bodyHi) - 2, 50, Y(V_WAIST + 0.04) - Y(bodyHi)); }
       if (top.back === 'string') { x.fillRect(0, Y(bodyHi) - 2, 70, Y(lo) - Y(bodyHi) - 4); x.fillRect(w - 70, Y(bodyHi) - 2, 70, Y(lo) - Y(bodyHi) - 4); }
-      if (top.leo) carveSides(x, 0, top.neck === 'none' ? 0.3 : 0.26);
+      if (top.leo) { carveSides(x, 0, top.neck === 'none' ? 0.3 : 0.26); carveUnder(x, 0.09); }
       x.globalCompositeOperation = 'source-over';
       // adornos
       if (top.neck === 'open') { x.fillStyle = '#1a1a1f'; x.globalCompositeOperation = 'destination-over'; x.fillRect(fx - 30, Y(0.78), 60, Y(0.56) - Y(0.78)); x.globalCompositeOperation = 'source-over'; }

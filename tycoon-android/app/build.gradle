@@ -10,8 +10,8 @@ android {
         applicationId 'com.fabrica.tycoon'
         minSdk 24
         targetSdk 34
-        versionCode 6
-        versionName '4.2'
+        versionCode 7
+        versionName '4.3'
     }
 
     // Clave fija para que cada nueva versión se instale encima de la anterior
