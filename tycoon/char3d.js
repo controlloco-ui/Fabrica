@@ -278,7 +278,7 @@ class Char3D {
     const T = (y) => y - hipY;                        // a coordenadas del grupo torso
 
     // --- torso: una sola malla continua (cintura, cadera y glúteos) con la ropa pintada encima ---
-    const gl = L.glutes === undefined ? 0.5 : L.glutes, G = (f ? 0.092 : 0.045) * (0.3 + 1.0 * gl) * Math.pow(wf, 0.6);
+    const gl = L.glutes === undefined ? 0.5 : L.glutes, G = 0;
     // punto del cuerpo para una altura v y un ángulo u (u = 0.5 delante, 0 detrás)
     const bodyPt = (v, u, o) => {
       const phi = Math.PI + u * 2 * Math.PI; let a = u * 2 * Math.PI; if (a > Math.PI) a -= 2 * Math.PI;
@@ -290,15 +290,59 @@ class Char3D {
     const NR = 44, MS = 44, pos = [], uvs = [], idx = [], o = {};
     const jg = { i: [], w: [], sd: [], nx: [], nz: [] };
     for (let i = 0; i <= NR; i++) for (let k = 0; k <= MS; k++) {
-      const v = -0.12 + (i / NR) * 1.12, u = k / MS; bodyPt(v, u, o);
-      if (v < 0) { const sh = 1 + v * 2.2; o.x *= sh; o.z *= sh; }    // cierre suave por debajo, hacia los muslos
+      const v = 0.04 + (i / NR) * 0.96, u = k / MS; bodyPt(v, u, o);
+      if (v < 0.14) { const sh = 1 - (0.14 - v) * 4.5; o.x *= sh; o.z *= sh; }   // se cierra por dentro de la cadera (la cadera y los muslos son otra malla continua)
       if (o.w > 0.06) { const n = Math.hypot(o.x, o.z) || 1; jg.i.push(pos.length / 3); jg.w.push(o.w); jg.sd.push(o.a > 0 ? 1 : -1); jg.nx.push(o.x / n); jg.nz.push(o.z / n); }
       pos.push(o.x, vy(v), o.z); uvs.push(u, v);
     }
     for (let i = 0; i < NR; i++) for (let k = 0; k < MS; k++) { const a = i * (MS + 1) + k, b = a + 1, c = a + MS + 1, d = c + 1; idx.push(a, b, c, b, d, c); }
     const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); tg.setIndex(idx); tg.computeVertexNormals();
     this.mesh(tg, this.tmat(this.torsoTex(L, top, bot, skin, topC, botC, f)), torso, 0, -hipY, 0);
-    this.hipGeo = tg; this.hipBase = Float32Array.from(pos); this.hipJ = jg; this.hipOn = false;
+    this.hipJ = null;
+    // --- cadera + glúteo + muslo: UNA malla por lado, de la cintura a la rodilla ---
+    // anillos elípticos que van de media pelvis a muslo; el glúteo es un abultamiento de esos mismos anillos
+    const hipX = Math.max(thighR * 0.95, hipR - thighR * 1.0), thL0 = hipY - kneeY;
+    const legsCov = bot ? (bot.legs || 0) : top.pants ? 1 : 0, lzP = clamp(legsCov * 2, 0, 1) >= 1 ? ((bot && bot.loose) || (top.pants ? 1.15 : 1)) : 1;
+    const GB = (f ? 0.074 : 0.036) * (0.25 + 1.05 * gl) * (thighR / 0.09) * Math.pow(wf, 0.4);   // crece con el muslo
+    const KEYS = [   // [y, centro x, radio x, radio z]
+      [vy(0.36), hipR * 0.40, hipR * 0.46, hipR * DZ * 0.8],
+      [vy(0.22), hipR * 0.47, hipR * 0.58, hipR * DZ * 0.99],
+      [vy(0.08), hipR * 0.47 * 0.6 + hipX * 0.4, hipR * 0.57, hipR * DZ * 0.99],
+      [y0 - 0.02, hipX, thighR * 1.07, thighR * 1.08],
+      [hipY - thL0 * 0.55, hipX, thighR * 0.87, thighR * 0.9],
+      [kneeY, hipX, kneeR * 1.04, kneeR * 1.04],
+    ];
+    const legRing = (y, o2) => {
+      let i = 1; while (i < KEYS.length - 1 && y < KEYS[i][0]) i++;
+      const A = KEYS[i - 1], B2 = KEYS[i]; let t = clamp((A[0] - y) / (A[0] - B2[0]), 0, 1); t = t * t * (3 - 2 * t);
+      const m = (k) => A[k] + (B2[k] - A[k]) * t, loose = 1 + (lzP - 1) * clamp((y0 + 0.02 - y) / 0.06, 0, 1);
+      o2.cx = m(1); o2.rx = m(2) * loose; o2.rz = m(3) * loose;
+      const v = (y - y0) / TH; o2.g = GB * Math.exp(-Math.pow((v - 0.1) / (v < 0.1 ? 0.075 : 0.15), 2)); return o2;
+    };
+    this.legRing = legRing; this.hipX = hipX;
+    const LR = 34, LC = 36, yTop = KEYS[0][0], yBot = kneeY, R2 = {};
+    this.hipLegs = [];
+    const thighTex = this.thighTex(L, top, bot, skin, topC, botC, { y0, TH, vy, yTop, yBot, hipY, thL: thL0, kneeY, legsCov });
+    [-1, 1].forEach(s => {
+      const pos = [], uvs = [], idx = [], wts = [], gw = [], nrm = [];
+      for (let i = 0; i <= LR; i++) {
+        const tt = i / LR, y = yTop + (yBot - yTop) * tt; legRing(y, R2);
+        const w = clamp((vy(0.18) - y) / (vy(0.18) - (hipY - thL0 * 0.42)), 0, 1);
+        for (let k = 0; k <= LC; k++) {
+          const th = k / LC * Math.PI * 2, sx = Math.sin(th), cz = Math.cos(th);
+          // abultamiento del glúteo: detrás, algo hacia fuera; cerca de la raja se hunde un poco
+          const back = Math.max(0, -cz), outw = Math.max(0, sx * s), inn = Math.max(0, -sx * s);
+          const gb = R2.g * Math.pow(back, 1.2) * (0.78 + 0.32 * outw - 0.22 * Math.pow(inn, 3));
+          const x = s * R2.cx + (R2.rx + gb * 0.45) * sx * s, z = (R2.rz + gb) * cz;
+          pos.push(x, y, z); uvs.push(k / LC, 1 - tt); wts.push(w); gw.push(gb / Math.max(1e-6, GB)); nrm.push(sx * s, cz);
+        }
+      }
+      for (let i = 0; i < LR; i++) for (let k = 0; k < LC; k++) { const a1 = i * (LC + 1) + k, b1 = a1 + 1, c1 = a1 + LC + 1, d1 = c1 + 1; idx.push(a1, c1, b1, b1, c1, d1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals();
+      const mat = this.tmat(thighTex, { side: THREE.DoubleSide });
+      const m = this.mesh(g, mat, body, 0, 0, 0); m.frustumCulled = false;
+      this.hipLegs.push({ s, g, base: Float32Array.from(pos), w: Float32Array.from(wts), gw: Float32Array.from(gw), nrm: Float32Array.from(nrm), on: true });
+    });
     // cuello y hombros
     const neckR = f ? 0.036 : 0.052, neckY = vy(1), headY = neckY + 0.025 + headR * 0.9;
     this.mesh(new THREE.CylinderGeometry(neckR, neckR * 1.15, 0.1, 12), top.neck === 'high' ? toon(topC) : skinM, torso, 0, T(neckY + 0.03), 0);
@@ -343,7 +387,7 @@ class Char3D {
       for (let i = 0; i <= RS; i++) for (let k = 0; k <= SM; k++) {
         const t = i / RS, u = k / SM, y = yT - len * t, v = (y - y0) / TH, phi = Math.PI + u * 2 * Math.PI;
         const pr = rT + (rB - rT) * Math.pow(t, 0.75), px = pr * Math.sin(phi), pz = pr * 0.94 * Math.cos(phi), rho = Math.hypot(px, pz) || 1e-6;
-        if (v >= -0.02) { bodyPt(Math.max(0, v), u, q); env[k] = Math.max(env[k], Math.hypot(q.x, q.z) + 0.014); }
+        if (v >= -0.02) env[k] = Math.max(env[k], this.outerR(y, Math.sin(phi), Math.cos(phi) * 0.94, rAt(clamp(v, 0, 1)), DZ) + 0.016);
         const sc = Math.max(1, env[k] / rho);
         sp.push(px * sc, -len * t, pz * sc); su.push(u, 1 - t); tt.push(t);
       }
@@ -382,14 +426,6 @@ class Char3D {
       if (sock.striped) { c.fillStyle = '#fff'; for (let y = h * (1 - b); y < h * (1 - a); y += 16) c.fillRect(0, y, w, 8); }
     };
     const legPants = clamp(legs * 2, 0, 1), calfPants = clamp(legs * 2 - 1, 0, 1), pcol = top.pants ? topC : botC;
-    const thTex = bandTex(skin, sock.net ? [] : [[0, clamp(sH - 1, 0, 1), sockCol]], (c, w, h) => {
-      const a = 0, b = clamp(sH - 1, 0, 1);
-      if (sock.net && sH > 1) { c.save(); c.beginPath(); c.rect(0, h * (1 - b), w, h * b); c.clip(); sockDeco(c, w, h, a, b); c.restore(); } else if (sH > 1) sockDeco(c, w, h, a, b);
-      if (sH > 1 && sH < 2 && !sock.net) { c.fillStyle = mixHex(sockCol, '#000000', 0.3); c.fillRect(0, h * (1 - b), w, 5); }
-      if (bootH > 1) { c.fillStyle = shoeC; c.fillRect(0, h * (1 - (bootH - 1)), w, h); }
-      if (legPants > 0) { c.fillStyle = clothFill(c, pcol, top.pants ? L.topP : L.botP); c.fillRect(0, 0, w, h * legPants); if (legPants < 1) { c.fillStyle = 'rgba(0,0,0,.2)'; c.fillRect(0, h * legPants - 3, w, 3); } }
-      if (bot && bot.stripe) { c.fillStyle = '#fff'; c.fillRect(w * 0.72, 0, 3, h * legPants); }
-    });
     const caTex = bandTex(skin, sock.net ? [] : [[0, clamp(sH, 0, 1), sockCol]], (c, w, h) => {
       const b = clamp(sH, 0, 1);
       if (sock.net && sH > 0) sockDeco(c, w, h, 0, 1); else if (sH > 0) sockDeco(c, w, h, 0, b);
@@ -397,16 +433,12 @@ class Char3D {
       if (bootH > 0) { c.fillStyle = shoeC; c.fillRect(0, h * (1 - Math.min(1, bootH)), w, h); c.fillStyle = 'rgba(255,255,255,.2)'; c.fillRect(0, h * (1 - Math.min(1, bootH)), w, 3); }
       if (calfPants > 0) { c.fillStyle = clothFill(c, pcol, top.pants ? L.topP : L.botP); c.fillRect(0, 0, w, h * calfPants); if (bot && bot.stripe) { c.fillStyle = '#fff'; c.fillRect(w * 0.72, 0, 3, h * calfPants); } }
     });
-    const thM = this.tmat(thTex), caM = this.tmat(caTex);
+    const caM = this.tmat(caTex);
     const lz = legPants >= 1 ? loose : 1, cz = calfPants >= 1 ? loose : 1;
-    const hipX = Math.max(thighR * 0.95, hipR - thighR * 1.0);
-    const jointCol = legPants > 0 ? toon(pcol) : skinM;
     const kneeM = calfPants > 0 ? toon(pcol) : bootH > 1 ? toon(shoeC) : sH > 1 ? toon(sockCol) : skinM;
     this.legs = [];
     [-1, 1].forEach(s => {
       const hip = new THREE.Group(); hip.position.set(s * hipX, hipY, 0); body.add(hip);
-      this.mesh(new THREE.SphereGeometry(thighR * lz, 12, 10), jointCol, hip);
-      this.mesh(new THREE.CylinderGeometry(thighR * lz, kneeR * 1.05 * lz, thL, 14), thM, hip, 0, -thL / 2, 0);
       const kn = new THREE.Group(); kn.position.y = -thL; hip.add(kn);
       this.mesh(new THREE.SphereGeometry(kneeR * 1.03 * Math.max(lz, cz > 1 ? cz : 1), 10, 8), kneeM, kn);
       const calf = new THREE.LatheGeometry([[kneeR * cz, 0], [kneeR * 1.12 * cz, -caL * 0.3], [kneeR * 0.85 * cz * (bell > 1 ? 1.1 : 1), -caL * 0.65], [ankleR * (calfPants >= 1 ? Math.max(cz * 1.5, bell * 1.6) : 1), -caL]].map(p => new THREE.Vector2(p[0], p[1])).reverse(), 14);
@@ -437,6 +469,63 @@ class Char3D {
     this.buildAcc(L, head, headR, accC, hairM);
     this.buildExtras(L, torso, T, vy, { neckY, neckR, chestR, hipR, DZ, shW, waistR, rAt }, f);
     this.root.scale.setScalar(1);
+  }
+
+  // distancia desde el eje hasta el borde exterior del cuerpo a la altura y, en la dirección (dx, dz)
+  outerR(y, dx, dz, rTorso, DZ) {
+    const n = Math.hypot(dx, dz) || 1; dx /= n; dz /= n;
+    let best = 1 / Math.sqrt(Math.pow(dx / rTorso, 2) + Math.pow(dz / (rTorso * DZ), 2));
+    const R = this.legRing(y, {});
+    [-1, 1].forEach(s => {
+      const rx = R.rx + R.g * 0.45, rz = R.rz + (dz < 0 ? R.g : 0), cx = s * R.cx;
+      const A = Math.pow(dx / rx, 2) + Math.pow(dz / rz, 2), B = -2 * cx * dx / (rx * rx), C = Math.pow(cx / rx, 2) - 1, D = B * B - 4 * A * C;
+      if (D >= 0) best = Math.max(best, (-B + Math.sqrt(D)) / (2 * A));
+    });
+    return best;
+  }
+
+  // ----- textura de la cadera y el muslo: u = vuelta (0 delante, 0.5 detrás), v = 1 arriba (cintura) → 0 rodilla -----
+  thighTex(L, top, bot, skin, topC, botC, K) {
+    const sock = SOCKS[L.socks] || SOCKS.ninguna, shoe = SHOES[L.shoes] || SHOES.zapatillas;
+    const sockC = CLOTHC[L.sockC] || '#1a1a1f', shoeC = CLOTHC[L.shoeC] || '#1a1a1f', sockCol = sock.sheer ? mixHex(skin, sockC, 0.55) : sockC;
+    const sH = sock.h || 0, bootH = shoe.boot || 0;
+    return canvasTex(128, 256, (c, w, h) => {
+      const row = y => h * (K.yTop - y) / (K.yTop - K.yBot);
+      c.fillStyle = skin; c.fillRect(0, 0, w, h);
+      // sombreado suave del pliegue bajo el glúteo
+      for (let x = 0; x < w; x++) { const th = (x + 0.5) / w * Math.PI * 2, back = Math.max(0, -Math.cos(th)); if (back < 0.2) continue;
+        const g = c.createLinearGradient(0, row(K.y0 + K.TH * 0.02), 0, row(K.y0 - 0.06)); g.addColorStop(0, 'rgba(120,60,50,0)'); g.addColorStop(0.45, `rgba(120,60,50,${0.22 * back})`); g.addColorStop(1, 'rgba(120,60,50,0)'); c.fillStyle = g; c.fillRect(x, row(K.y0 + K.TH * 0.02), 1, row(K.y0 - 0.06) - row(K.y0 + K.TH * 0.02)); }
+      // medias y botas altas
+      if (sH > 1) { const yt = K.kneeY + (sH - 1) * K.thL; c.fillStyle = sockCol; c.fillRect(0, row(yt), w, h); if (sock.net) { c.fillStyle = skin; c.fillRect(0, row(yt) + 5, w, h); c.save(); c.beginPath(); c.rect(0, row(yt), w, h); c.clip(); c.strokeStyle = sockC; c.lineWidth = 1.1; for (let i = -h; i < h * 2; i += 8) { c.beginPath(); c.moveTo(0, i); c.lineTo(w, i + w); c.moveTo(w, i); c.lineTo(0, i + w); c.stroke(); } c.restore(); }
+        if (sock.striped) { c.fillStyle = '#fff'; for (let y = row(yt); y < h; y += 14) c.fillRect(0, y, w, 7); }
+        if (sH < 2) { c.fillStyle = mixHex(sockCol, '#000000', 0.3); c.fillRect(0, row(yt), w, 5); } }
+      if (bootH > 1) { const yt = K.kneeY + (bootH - 1) * K.thL; c.fillStyle = shoeC; c.fillRect(0, row(yt), w, h); c.fillStyle = 'rgba(255,255,255,.2)'; c.fillRect(0, row(yt), w, 3); }
+      // prenda de abajo (o body / mono): borde inferior por columna
+      const leo = top.leo, pants = top.pants, skirtB = bot && bot.skirt, skirtT = top.skirt;
+      let col = null, pat = 0, legs = 0, under = 0, cut = 0;
+      if (pants) { col = topC; pat = L.topP; legs = 1; }
+      else if (leo) { col = topC; pat = L.topP; legs = 0; under = 0.09; cut = 1; }
+      else if (bot && !skirtB) { col = botC; pat = L.botP; legs = bot.legs || 0; under = bot.under || 0; cut = bot.cut ? 1 : 0; }
+      else if (skirtB) { col = botC; pat = L.botP; legs = 0; under = 0.06; cut = 0; }
+      else if (skirtT) { col = topC; pat = L.topP; legs = 0; under = 0.06; }
+      if (!col) return;
+      const lp = clamp(legs * 2, 0, 1), fill = clothFill(c, col, pat), hem = mixHex(col, '#000000', 0.3);
+      for (let x = 0; x < w; x++) {
+        const th = (x + 0.5) / w * Math.PI * 2, back = Math.max(0, -Math.cos(th)), side = Math.abs(Math.sin(th));
+        let yb = lp > 0 ? K.hipY - lp * K.thL : K.y0 - 0.006;
+        if (lp >= 1) yb = K.yBot - 1;
+        if (lp < 0.35) {
+          const rb = K.y0 + under * K.TH * 1.45 * Math.pow(back, 0.8);          // deja ver la parte baja de la nalga
+          const rs = K.y0 + cut * K.TH * 0.2 * Math.pow(side, 2) * (1 - back * 0.5); // corte alto en la cadera
+          yb = Math.max(yb, rb, rs);
+        }
+        const r0 = Math.max(0, row(K.vy(1))), r1 = Math.min(h, row(yb));
+        if (r1 <= r0) continue;
+        c.fillStyle = fill; c.fillRect(x, r0, 1, r1 - r0);
+        c.fillStyle = hem; c.fillRect(x, r1 - 2, 1, 2);
+        if (bot && bot.stripe && Math.abs(Math.sin(th)) > 0.97) { c.fillStyle = '#fff'; c.fillRect(x, r0, 1, r1 - r0); }
+      }
+    });
   }
 
   // ----- ropa pintada sobre el torso (u: 0.5 = delante; v: 0 entrepierna, 1 cuello) -----
@@ -653,16 +742,28 @@ class Char3D {
     this.torso.rotation.y = sn * 0.1 * a; this.torso.rotation.z = Math.cos(ph) * 0.035 * a * (d.f ? 1.4 : 0.6); this.torso.rotation.x = st.run ? 0.16 * a : 0.03 * a;
     const breathe = 1 + Math.sin(t * 2) * 0.012;
     this.breasts.forEach((m, i) => { m.position.y = m.userData.y0 + j.b * 0.006 * (0.3 + d.bust) + Math.sin(t * 2) * 0.002; m.scale.set(breathe, 0.96 - j.b * 0.02, 1 + j.b * 0.015); });
-    // física de la cadera: cada lado sube con su paso y arrastra el rebote del muelle (se deforma la malla, no piezas sueltas)
-    const hj = this.hipJ, active = a > 0.02 || Math.abs(j.g) > 0.02;
-    if (hj && (active || this.hipOn)) {
-      const P_ = this.hipGeo.attributes.position, B = this.hipBase, k = 0.35 + d.glutes;
-      for (let n = 0; n < hj.i.length; n++) {
-        const vi = hj.i[n] * 3, w = hj.w[n], sd = hj.sd[n], step = Math.sin(ph + (sd > 0 ? 0 : Math.PI)) * a, wob = j.g * k * sd;
-        const out = (wob * 0.006 + step * 0.004) * w;
-        P_.array[vi] = B[vi] + hj.nx[n] * out; P_.array[vi + 1] = B[vi + 1] + (step * 0.012 * k + j.g * k * 0.007) * w; P_.array[vi + 2] = B[vi + 2] + hj.nz[n] * out;
-      }
-      P_.needsUpdate = true; this.hipOn = active;
+    // cadera + muslo: cada vértice mezcla el giro del torso (arriba) con el de la pierna (abajo) y añade el rebote del glúteo
+    if (this.hipLegs) {
+      const active = a > 0.01 || Math.abs(j.g) > 0.01 || Math.abs(this.torso.rotation.x) > 0.005;
+      this.torso.updateMatrix(); const M = this.torso.matrix.elements, hy = d.hipY, k = 0.35 + d.glutes;
+      this.hipLegs.forEach((hl, li) => {
+        if (!active && !hl.on) return; hl.on = active;
+        const leg = this.legs[li], al = leg.hip.rotation.x, ca = Math.cos(al), sa = Math.sin(al), px = leg.s * this.hipX;
+        const step = Math.sin(ph + (hl.s > 0 ? 0 : Math.PI)) * a, wob = j.g * k;
+        const P_ = hl.g.attributes.position, A = P_.array, B = hl.base;
+        for (let n = 0, vi = 0; vi < A.length; n++, vi += 3) {
+          let x = B[vi], y = B[vi + 1], z = B[vi + 2];
+          const gw = hl.gw[n];
+          if (gw > 0.01) { const out = (wob * 0.007 * hl.s + step * 0.004) * gw; x += hl.nrm[n * 2] * out; z += hl.nrm[n * 2 + 1] * out; y += (step * 0.011 * k + wob * 0.006) * gw; }
+          const w = hl.w[n];
+          // giro del torso (coordenadas del torso: y - hy)
+          const ty = y - hy, tx = M[0] * x + M[4] * ty + M[8] * z + M[12], tyy = M[1] * x + M[5] * ty + M[9] * z + M[13], tz = M[2] * x + M[6] * ty + M[10] * z + M[14];
+          // giro de la pierna alrededor de la articulación de la cadera
+          const dy = y - hy, ly = hy + dy * ca - z * sa, lz = dy * sa + z * ca;
+          A[vi] = tx * (1 - w) + x * w; A[vi + 1] = tyy * (1 - w) + ly * w; A[vi + 2] = tz * (1 - w) + lz * w;
+        }
+        P_.needsUpdate = true; hl.g.computeVertexNormals();
+      });
     }
     // física de la tela: el bajo se retrasa al andar, se abre con cada zancada y ondea con el muelle
     if (this.skGeo) {
