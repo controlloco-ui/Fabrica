@@ -21,7 +21,9 @@ const TOPS = {
   cuellov: { name: 'Cuello en V', icon: '👕', lo: .24, hi: 1, neck: 'v', sleeve: .5 },
   tirantes: { name: 'Tirantes', icon: '🎽', lo: .24, hi: .8, neck: 'scoop', straps: 1, cup: .88 },
   escotada: { name: 'Camiseta escotada', icon: '🎽', lo: .26, hi: .8, neck: 'deep', straps: 1, cup: .72 },
-  crop: { name: 'Top corto', icon: '👚', lo: .53, hi: .8, neck: 'scoop', straps: 1, cup: .85 },
+  crop: { name: 'Top corto', icon: '👚', lo: .57, hi: .8, neck: 'scoop', straps: 1, cup: .85 },
+  minitop: { name: 'Mini top', icon: '👚', lo: .61, hi: .78, neck: 'scoop', straps: 1, cup: .72 },
+  cruzado: { name: 'Top cruzado', icon: '🎀', lo: .58, hi: .8, neck: 'deep', straps: 'halter', cup: .68, back: 'string' },
   deportivo: { name: 'Top deportivo', icon: '🏃', lo: .52, hi: .82, neck: 'scoop', straps: 2, cup: .92 },
   bandeau: { name: 'Palabra de honor', icon: '🎀', lo: .56, hi: .76, neck: 'none', straps: 'none', cup: .62 },
   halter: { name: 'Top halter', icon: '👚', lo: .46, hi: .8, neck: 'v', straps: 'halter', cup: .8, back: 'open' },
@@ -44,7 +46,8 @@ const TOPS = {
   banador: { name: 'Bañador', icon: '🩱', lo: 0, hi: .8, neck: 'scoop', straps: 1, cup: .86, leo: 1, back: 'open' },
   banadorv: { name: 'Bañador escotado', icon: '🩱', lo: 0, hi: .8, neck: 'deep', straps: 'halter', cup: .7, leo: 1, back: 'open' },
   conejita: { name: 'Body de conejita', icon: '🐰', lo: 0, hi: .74, neck: 'none', straps: 'none', cup: .62, leo: 1 },
-  minivestido: { name: 'Minivestido', icon: '👗', lo: .2, hi: .8, neck: 'v', straps: 1, cup: .82, skirt: .14, flare: 1.08 },
+  minivestido: { name: 'Minivestido', icon: '👗', lo: .2, hi: .8, neck: 'v', straps: 1, cup: .82, skirt: .1, flare: 1.08 },
+  microvestido: { name: 'Microvestido', icon: '👗', lo: .2, hi: .76, neck: 'none', straps: 'none', cup: .64, skirt: .07, flare: 1.04 },
   ajustado: { name: 'Vestido ajustado', icon: '👗', lo: .2, hi: .8, neck: 'scoop', straps: 1, cup: .85, skirt: .32, flare: 1.02 },
   verano: { name: 'Vestido de verano', icon: '👗', lo: .2, hi: .8, neck: 'scoop', straps: 1, cup: .88, skirt: .36, flare: 1.55 },
   noche: { name: 'Vestido de noche', icon: '💃', lo: .2, hi: .8, neck: 'deep', straps: 'halter', cup: .7, skirt: .9, flare: 1.25, back: 'open' },
@@ -68,17 +71,20 @@ const BOTS = {
   pirata: { name: 'Pirata', icon: '👖', legs: .7, rise: .3 },
   shorts: { name: 'Shorts', icon: '🩳', legs: .32, rise: .3, loose: 1.12 },
   ciclista: { name: 'Ciclista', icon: '🚴', legs: .3, rise: .36 },
-  minishort: { name: 'Minishorts', icon: '🩳', legs: .1, rise: .26 },
+  minishort: { name: 'Minishorts', icon: '🩳', legs: .07, rise: .26 },
+  hotpants: { name: 'Hot pants', icon: '🩳', legs: 0, rise: .2, cut: 1, cheek: .7 },
   microshort: { name: 'Microshorts', icon: '🩳', legs: .03, rise: .2 },
   bikini: { name: 'Bikini', icon: '👙', legs: 0, rise: .18, cut: 1 },
   bikinialto: { name: 'Bikini de talle alto', icon: '👙', legs: 0, rise: .34, cut: 1 },
+  brasileno: { name: 'Bikini brasileño', icon: '👙', legs: 0, rise: .17, cut: 1, cheek: .55 },
   faldalarga: { name: 'Falda larga', icon: '👗', skirt: .86, rise: .34, flare: 1.4 },
   midi: { name: 'Falda midi', icon: '👗', skirt: .56, rise: .34, flare: 1.3 },
   tubo: { name: 'Falda tubo', icon: '👗', skirt: .44, rise: .38, flare: 1.0 },
   vuelo: { name: 'Falda de vuelo', icon: '👗', skirt: .28, rise: .34, flare: 1.7 },
-  plisada: { name: 'Falda plisada', icon: '👗', skirt: .2, rise: .3, flare: 1.45, pleats: 1 },
-  minifalda: { name: 'Minifalda', icon: '👗', skirt: .16, rise: .28, flare: 1.15 },
-  microfalda: { name: 'Microfalda', icon: '👗', skirt: .09, rise: .24, flare: 1.2 },
+  plisada: { name: 'Falda plisada', icon: '👗', skirt: .15, rise: .3, flare: 1.45, pleats: 1 },
+  minifalda: { name: 'Minifalda', icon: '👗', skirt: .12, rise: .28, flare: 1.15 },
+  microfalda: { name: 'Microfalda', icon: '👗', skirt: .065, rise: .22, flare: 1.2 },
+  cinturon: { name: 'Falda cinturón', icon: '👗', skirt: .04, rise: .2, flare: 1.15 },
   tutu: { name: 'Tutú', icon: '🩰', skirt: .1, rise: .3, flare: 2.2, pleats: 1 },
   pareo: { name: 'Pareo', icon: '🏝️', skirt: .4, rise: .24, flare: 1.12 },
 };
@@ -140,7 +146,7 @@ function fixLook(L) {
 }
 const OUTFITS = [
   { name: 'Jefa de fábrica', icon: '👷', set: { top: 'crop', topC: 1, bottom: 'minishort', botC: 6, shoes: 'botas', shoeC: 13, socks: 'ninguna', acc: 'casco', gloves: 'cortos', gloveC: 2, neckw: 'ninguno', back: 'ninguno' } },
-  { name: 'Colegiala', icon: '🎒', set: { top: 'marinera', topC: 9, bottom: 'plisada', botC: 6, shoes: 'bailarinas', shoeC: 12, socks: 'muslo', sockC: 9, acc: 'lazo', accC: 0, neckw: 'ninguno', back: 'mochila', backC: 0, gloves: 'ninguno' } },
+  { name: 'Marinera', icon: '⚓', set: { top: 'marinera', topC: 9, bottom: 'plisada', botC: 6, shoes: 'bailarinas', shoeC: 12, socks: 'muslo', sockC: 9, acc: 'lazo', accC: 0, neckw: 'ninguno', back: 'ninguno', gloves: 'ninguno' } },
   { name: 'Sirvienta', icon: '🧹', set: { top: 'maid', topC: 12, shoes: 'bailarinas', shoeC: 12, socks: 'muslo', sockC: 9, acc: 'cofia', accC: 9, neckw: 'pajarita', neckC: 0, back: 'ninguno', gloves: 'cortos', gloveC: 9 } },
   { name: 'Playa', icon: '🏖️', set: { top: 'bikini', topC: 0, bottom: 'bikini', botC: 0, shoes: 'sandalias', shoeC: 2, socks: 'ninguna', acc: 'pajita', accC: 14, neckw: 'ninguno', back: 'ninguno', gloves: 'ninguno' } },
   { name: 'Conejita', icon: '🐰', set: { top: 'conejita', topC: 12, shoes: 'tacones', shoeC: 12, socks: 'rejilla', sockC: 12, acc: 'conejo', accC: 12, neckw: 'pajarita', neckC: 12, back: 'pompon', backC: 9, gloves: 'munequeras', gloveC: 9 } },
@@ -169,12 +175,12 @@ function randomOutfit() {
 function jigStep(j, dt, moving, phase, vx, kick) {
   if (!OPT.phys) { j.b = j.g = j.h = j.s = 0; j.bv = j.gv = j.hv = j.sv = 0; return; }
   const step = Math.floor(phase / Math.PI);
-  if (moving && step !== j.step) { j.bv += 15; j.gv += 12; j.sv += (step % 2 ? 6 : -6); j.hv += (step % 2 ? 5 : -5); }
+  if (moving && step !== j.step) { j.bv += 15; j.gv += (step % 2 ? 17 : -17); j.sv += (step % 2 ? 6 : -6); j.hv += (step % 2 ? 5 : -5); }
   j.step = step;
   if (kick) { j.bv += kick; j.gv += kick * 0.8; }
   const sub = Math.min(dt, 0.05);
   j.bv += (-190 * j.b - 8 * j.bv) * sub; j.b = clamp(j.b + j.bv * sub, -2.5, 2.5);
-  j.gv += (-160 * j.g - 7.5 * j.gv) * sub; j.g = clamp(j.g + j.gv * sub, -2.5, 2.5);
+  j.gv += (-115 * j.g - 5.5 * j.gv) * sub; j.g = clamp(j.g + j.gv * sub, -2.5, 2.5);
   j.hv += (-55 * j.h - 6 * j.hv) * sub; j.h = clamp(j.h + j.hv * sub, -6, 6);
   j.sv += (-90 * j.s - 7 * j.sv) * sub; j.s = clamp(j.s + j.sv * sub, -4, 4);
 }
@@ -303,20 +309,22 @@ class Char3D {
     // --- glúteos ---
     this.glutes = [];
     {
-      const gl = this.d.glutes, gR = (f ? 0.074 : 0.062) * (0.72 + 0.62 * gl) * Math.pow(wf, 0.6), gy = vy(0.13), gz = -(hipR * DZ * 0.44);
+      const gl = this.d.glutes, gR = (f ? 0.08 : 0.062) * (0.72 + 0.66 * gl) * Math.pow(wf, 0.6), gy = vy(0.115), gz = -(hipR * DZ * 0.47);
       const cov = top.leo || top.pants || top.skirt || (bot && true);
       const gcol = top.leo || top.pants || top.skirt ? topC : botC;
+      const shade = (c, w, h) => { const g1 = c.createLinearGradient(0, 0, 0, h); g1.addColorStop(0, 'rgba(255,255,255,.16)'); g1.addColorStop(0.45, 'rgba(255,255,255,0)'); g1.addColorStop(0.8, 'rgba(90,40,40,.12)'); g1.addColorStop(1, 'rgba(70,30,30,.38)'); c.fillStyle = g1; c.fillRect(0, 0, w, h); const g2 = c.createRadialGradient(w * 0.5, h * 0.42, 2, w * 0.5, h * 0.42, w * 0.3); g2.addColorStop(0, 'rgba(255,255,255,.22)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(0, 0, w, h); };
       const gtex = () => canvasTex(64, 64, (c, w, h) => {
         c.fillStyle = skin; c.fillRect(0, 0, w, h);
-        if (!cov) return;
+        if (!cov) { shade(c, w, h); return; }
         const cut = (bot && bot.cut) || top.leo;
         c.fillStyle = clothFill(c, gcol, top.leo || top.pants || top.skirt ? L.topP : L.botP);
         c.fillRect(0, 0, w, h);
-        if (cut) { c.fillStyle = skin; c.fillRect(0, h * 0.78, w, h); }
+        if (cut) { c.fillStyle = skin; c.fillRect(0, h * ((bot && bot.cheek) || 0.78), w, h); c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(0, h * ((bot && bot.cheek) || 0.78) - 2, w, 2); }
+        shade(c, w, h);
       });
       [-1, 1].forEach(s => {
-        const m = this.mesh(new THREE.SphereGeometry(gR, 16, 12), this.tmat(gtex()), torso, s * gR * 0.74, T(gy), gz);
-        m.scale.set(1, 1.02, 0.92); m.rotation.y = Math.PI / 2; m.userData.y0 = T(gy); this.glutes.push(m);
+        const m = this.mesh(new THREE.SphereGeometry(gR, 26, 20), this.tmat(gtex()), torso, s * gR * 0.76, T(gy), gz);
+        m.scale.set(1.04, 1.1, 0.98); m.userData.s = s; m.userData.z0 = gz; m.rotation.y = Math.PI / 2; m.userData.y0 = T(gy); this.glutes.push(m);
       });
     }
     // --- falda / vestido ---
@@ -341,7 +349,7 @@ class Char3D {
       const g = new THREE.LatheGeometry(sp, 28, Math.PI, Math.PI * 2);
       const piv = new THREE.Group(); piv.position.y = T(yT); torso.add(piv);
       const m = this.mesh(g, this.tmat(tex, { side: THREE.DoubleSide }), piv, 0, 0, 0); m.scale.z = 0.94;
-      this.skirt = piv; this.glutes.forEach(q => { q.visible = sk.skirt < 0.2; q.scale.multiplyScalar(0.9); });
+      this.skirt = piv; this.glutes.forEach(q => { q.visible = sk.skirt < 0.2; });
     }
     // --- brazos ---
     const upL = 0.25, foL = 0.23;
@@ -641,7 +649,10 @@ class Char3D {
     this.torso.rotation.y = sn * 0.1 * a; this.torso.rotation.z = Math.cos(ph) * 0.035 * a * (d.f ? 1.4 : 0.6); this.torso.rotation.x = st.run ? 0.16 * a : 0.03 * a;
     const breathe = 1 + Math.sin(t * 2) * 0.012;
     this.breasts.forEach((m, i) => { m.position.y = m.userData.y0 + j.b * 0.006 * (0.3 + d.bust) + Math.sin(t * 2) * 0.002; m.scale.set(breathe, 0.96 - j.b * 0.02, 1 + j.b * 0.015); });
-    this.glutes.forEach((m, i) => { m.position.y = m.userData.y0 + j.g * 0.005 * (0.3 + d.glutes) * (i ? 1 : -1) * (a > 0.1 ? 1 : 0) + j.g * 0.002; });
+    // cada lado sube y baja con su paso, se aplasta y estira, y arrastra el rebote del muelle
+    this.glutes.forEach(m => { const sd = m.userData.s, k = 0.35 + d.glutes, step = Math.sin(ph + (sd > 0 ? 0 : Math.PI)) * a, w = j.g * k;
+      m.position.y = m.userData.y0 + step * 0.012 * k + w * 0.007; m.position.z = m.userData.z0 - Math.abs(w) * 0.003;
+      m.scale.set(1.04 + w * 0.02, 1.1 - w * 0.045 + step * 0.03, 0.98 + w * 0.03); m.rotation.z = step * 0.1 * sd + w * 0.03 * sd; });
     this.head.rotation.y = Math.sin(t * 0.7) * 0.06 * (1 - a) - this.torso.rotation.y * 0.6; this.head.rotation.x = Math.sin(t * 0.9) * 0.025;
     this.sway.forEach(s => { s.g.rotation.x = s.rx + (s.tail ? Math.sin(t * 2.2) * 0.12 : 0) + j.h * 0.035 * s.k + a * 0.22 * s.k * (s.tail ? 0.3 : 1); s.g.rotation.z = s.rz + j.s * 0.02 * s.k + (s.tail ? Math.sin(t * 1.6) * 0.3 : Math.sin(t * 1.1 + s.rz) * 0.015); });
     if (this.skirt) { this.skirt.rotation.x = j.s * 0.018 + a * 0.05; this.skirt.rotation.z = j.s * 0.03; }
